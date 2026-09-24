@@ -54,3 +54,13 @@ def test_zeile_mit_unklar_und_kaputtem_status():
 def test_safe_error_zeigt_keine_meldung():
     text = safe_error("sheets", ValueError("geheimes passwort"))
     assert "geheim" not in text and "ValueError" in text
+
+
+def test_beispielprofil_ist_gueltiges_yaml():
+    """Das Beispielprofil muss lesbar sein und die wichtigen Schlüssel haben."""
+    import yaml
+    from src.config import CONFIG_DIR
+    profil = yaml.safe_load((CONFIG_DIR / "profile.example.yaml").read_text(encoding="utf-8"))
+    for key in ("geburtsdatum", "interessen_punkte", "kriterien", "netzwerke", "projekte", "projekte_bedarf"):
+        assert key in profil
+    assert abs(sum(profil["interessen_punkte"].values()) - 100) < 1e-9

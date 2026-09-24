@@ -275,7 +275,7 @@ netzwerke:
 projekte:
   - name: Projekt A
     beschreibung: Beispielprojekt
-  bedarf: [geld, api_credits, cloud_credits, hardware, mentoring, inkubator, preise]
+projekte_bedarf: [geld, api_credits, cloud_credits, hardware, mentoring, inkubator, preise]
 
 bereits_gefoerdert: [Beispielprogramm]
 ```
