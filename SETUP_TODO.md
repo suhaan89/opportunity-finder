@@ -89,6 +89,43 @@ Windows-Hinweis: Die Befehle unten sind für die Eingabeaufforderung/PowerShell 
 
 ---
 
-## Phase 2 und 3
+## 6. GitHub Pages einschalten (Phase 2)
 
-(werden ergänzt, sobald die Funktionen gebaut sind)
+1. Repo → **Settings → Pages** → bei **„Source"** **„GitHub Actions"** wählen. (Mehr ist nicht nötig.)
+2. Danach startet nach jedem erfolgreichen „Daily"-Lauf automatisch der Workflow **„Pages"** und veröffentlicht die Seite.
+   Die Adresse steht im Pages-Workflow-Lauf und unter Settings → Pages (meist `https://suhaan89.github.io/opportunity-finder/`).
+3. Die Seite zeigt nur öffentliche Angebotsdaten (kein Score, Status, Notizen, Profil) und hat `noindex` (Google soll sie nicht listen).
+   Alles, was du im Sheet auf Status `ignoriert` setzt, verschwindet von der Seite.
+
+## 7. Kalender-Feed per geheimem Gist (Phase 2)
+
+**a) Gist anlegen**
+1. Öffne https://gist.github.com/ (eingeloggt).
+2. Dateiname: `opportunities.ics`, Inhalt (nur diese zwei Zeilen):
+   ```
+   BEGIN:VCALENDAR
+   END:VCALENDAR
+   ```
+3. Unten **„Create secret gist"** wählen (nicht „public"!).
+4. Die **Gist-ID** ist der letzte Teil der Adresse: `https://gist.github.com/suhaan89/DIESE_ID`.
+
+**b) Token anlegen (nur Recht „gist")**
+1. https://github.com/settings/tokens → **„Generate new token" → „Generate new token (classic)"**.
+2. Name z. B. `opportunity-finder-gist`, Ablauf nach Wunsch (bei Ablauf musst du einen neuen Token eintragen).
+3. Hake **nur `gist`** an. Erzeugen und den Token sofort kopieren (wird nur einmal angezeigt).
+
+**c) Eintragen**
+- In `.env` (nur lokal) und als GitHub Secrets: `GIST_TOKEN` = Token, `GIST_ID` = Gist-ID.
+
+**d) In Google Kalender abonnieren (einmalig)**
+1. Nach dem ersten echten Lauf ist der Feed gefüllt. Die Abo-Adresse lautet:
+   `https://gist.githubusercontent.com/suhaan89/DEINE_GIST_ID/raw/opportunities.ics`
+   (ohne Commit-Hash, so zeigt sie immer die neueste Version.)
+2. https://calendar.google.com → links bei **„Weitere Kalender"** auf **+** → **„Per URL"** → Adresse einfügen → **„Kalender hinzufügen"**.
+3. Google aktualisiert abonnierte Kalender nur alle paar Stunden bis ~1 Tag, das ist normal.
+4. Im Feed erscheinen nur Einträge mit Status `interessant`, `in_vorbereitung`, `beworben` oder `zusage`.
+   Deadline-Reminder-Mails kommen für `interessant` und `in_vorbereitung` (7 und 2 Tage vorher).
+   Setze also im Google Sheet in der Spalte `status` die Werte per Dropdown.
+
+## Phase 3
+(wird ergänzt, sobald die Funktionen gebaut sind)

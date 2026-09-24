@@ -1,0 +1,41 @@
+# Veröffentlicht die öffentliche Seite auf GitHub Pages, nachdem "Daily" erfolgreich war.
+# Einmalig nötig: Repo -> Settings -> Pages -> Source: "GitHub Actions".
+# Läuft nur nach dem Daily-Workflow (kein Pull-Request-Trigger, keine Secrets nötig).
+name: Pages
+
+on:
+  workflow_run:
+    workflows: ["Daily"]
+    types: [completed]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  actions: read          # nötig, um das Artefakt aus dem Daily-Lauf herunterzuladen
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: public_site
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public_site
+      - id: deployment
+        uses: actions/deploy-pages@v4

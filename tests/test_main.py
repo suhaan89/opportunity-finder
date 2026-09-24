@@ -19,6 +19,13 @@ PROFIL = {
 }
 
 
+def _umleiten(monkeypatch, tmp_path):
+    """Alle Ausgabedateien in den Test-Ordner umleiten."""
+    monkeypatch.setattr("src.mailer.OUT_DIR", tmp_path / "out")
+    monkeypatch.setattr("src.ics.OUT_DIR", tmp_path / "out")
+    monkeypatch.setattr("src.site.SITE_DIR", tmp_path / "public_site")
+
+
 def services(tmp_path):
     settings = load_settings()
     budget = Budget(settings["gemini"]["max_calls_per_run"])
@@ -28,7 +35,7 @@ def services(tmp_path):
 
 
 def test_kompletter_lauf(tmp_path, monkeypatch):
-    monkeypatch.setattr("src.mailer.OUT_DIR", tmp_path / "out")
+    _umleiten(monkeypatch, tmp_path)
     for k in ("SMTP_USER", "SMTP_APP_PASSWORD", "MAIL_TO"):
         monkeypatch.delenv(k, raising=False)
     svc = services(tmp_path)
@@ -47,10 +54,15 @@ def test_kompletter_lauf(tmp_path, monkeypatch):
     out = run_outputs(svc, result)
     assert out["mail"].startswith("lokal gespeichert")
     assert (tmp_path / "out" / "mail.html").exists()
+    assert out["seite"].startswith("erstellt") and (tmp_path / "public_site" / "index.html").exists()
+    assert out["kalender"].startswith("lokal") and (tmp_path / "out" / "opportunities.ics").exists()
+    # Auf der öffentlichen Seite steht nichts Privates
+    seite = (tmp_path / "public_site" / "index.html").read_text(encoding="utf-8")
+    assert "Mock-Bewertung" not in seite
 
 
 def test_zweiter_lauf_findet_nichts_neues(tmp_path, monkeypatch):
-    monkeypatch.setattr("src.mailer.OUT_DIR", tmp_path / "out")
+    _umleiten(monkeypatch, tmp_path)
     run_pipeline(services(tmp_path))
     zweiter = run_pipeline(services(tmp_path))
     assert zweiter.counts["neu_gespeichert"] == 0 and zweiter.counts["extrahiert"] == 0
@@ -81,3 +93,19 @@ def test_dotenv(tmp_path, monkeypatch):
     import os
     assert os.environ["FOO_TEST"] == "abc" and os.environ["QUOTED"] == "x y" and "LEER" not in os.environ
     monkeypatch.delenv("FOO_TEST"); monkeypatch.delenv("QUOTED")
+
+
+def test_reminder_loest_mail_aus(tmp_path, monkeypatch):
+    _umleiten(monkeypatch, tmp_path)
+    for k in ("SMTP_USER", "SMTP_APP_PASSWORD", "MAIL_TO"):
+        monkeypatch.delenv(k, raising=False)
+    svc = services(tmp_path)
+    result = run_pipeline(svc)
+    # Nutzer markiert einen Eintrag als 'interessant'; Deadline liegt in 7 Tagen
+    eintrag = result.tables.aktiv[0]
+    eintrag.status = "interessant"
+    eintrag.deadline = date.fromordinal(HEUTE.toordinal() + 7)
+    result.new_opps = []  # nichts Neues, nur der Reminder
+    out = run_outputs(svc, result)
+    assert out["mail"].startswith("lokal gespeichert")
+    assert "In 7 Tagen" in (tmp_path / "out" / "mail.html").read_text(encoding="utf-8")
