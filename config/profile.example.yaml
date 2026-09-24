@@ -1,0 +1,48 @@
+# Beispielprofil (fiktiv, öffentlich). Das echte Profil liegt als GitHub Secret PROFILE_YAML
+# bzw. lokal in profile.yaml (beides nie im Repo).
+geburtsdatum: 2010-03-15
+schulabschluss: Abitur 2027 (Beispiel-Bundesland)
+schnitt: 2.0
+coding_level: anfaenger
+heimatort: Musterstadt
+sprachen_programme: [de, en]
+
+interessen_punkte:
+  ki_forschung: 40
+  informatik_coding: 20
+  social_startups: 20
+  politik_demokratie: 10
+  wirtschaft: 5
+  sport: 5
+
+ausgeschlossene_wettbewerbsfaecher: [geschichte, deutsch, englisch]
+ausgeschlossene_laender: [Beispielland]
+
+studium:
+  ziel: gute Uni weltweit, Duales Studium als Alternative
+  richtungen: [Informatik, KI]
+
+kriterien:
+  kategorien: alle
+  reichweite: weltweit
+  format_praeferenz: praesenz
+  reisekosten_muessen_uebernommen_werden: true
+  max_teilnahmegebuehr_eur: 150
+  regionalradius_km: 60
+  auch_nach_abi: true
+  sperrzeitraeume:
+    - von: 2027-03-01
+      bis: 2027-05-05
+  rechtsform_erforderlich_ausschliessen: true
+
+netzwerke:
+  young_founders_network: 10
+  young_leaders: 6
+  salto_youth: 2
+
+projekte:
+  - name: Projekt A
+    beschreibung: Beispielprojekt
+  bedarf: [geld, api_credits, cloud_credits, hardware, mentoring, inkubator, preise]
+
+bereits_gefoerdert: [Beispielprogramm]

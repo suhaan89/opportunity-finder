@@ -1,0 +1,15 @@
+# Geheimnisse und persönliche Daten - NIEMALS committen
+.env
+service_account.json
+profile.yaml
+*.local.yaml
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Sonstiges
+.DS_Store
+out/
