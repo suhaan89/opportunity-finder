@@ -63,6 +63,9 @@ Windows-Hinweis: Die Befehle unten sind für die Eingabeaufforderung/PowerShell 
 
 ## 4. Lokal testen (Phase 1)
 
+- [ ] **Einrichtung prüfen:** `.venv\Scripts\python -m src.check` zeigt, was schon eingerichtet ist und was noch fehlt
+      (nur Namen, nie die Werte). Mit `--live` (`.venv\Scripts\python -m src.check --live`) werden auch die Verbindungen
+      zu Gemini, Google Sheet, Gmail-Login und Gmail-Lesezugriff getestet. Es wird nichts verschickt oder verändert.
 - [ ] Mit fiktiven Daten (braucht nichts): `.venv\Scripts\python -m src.main --mock` → öffne danach `out\mail.html` im Browser.
 - [ ] Echt (nach Schritt 1 bis 3): `.venv\Scripts\python -m src.main`
       Es erscheinen nur Zähler. Prüfe dein Google Sheet und dein Postfach.
