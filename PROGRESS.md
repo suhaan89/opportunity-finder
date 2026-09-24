@@ -24,12 +24,13 @@ Eine neue Session muss allein mit dieser Datei + `SPEC.md` + `SETUP_TODO.md` wei
   - [x] 1.4 Dedupe (`dedupe.py`)
   - [x] 1.5 Gemini-Wrapper mit Budget (`gemini.py`), Collect, Verify (Link-Prüfung), Extract (Zitat-Pflicht für Daten)
   - [x] 1.6 Speicher (`sheets.py`): Google Sheets (Tabs Aktiv/Archiv/Projekte/Log) + lokaler Ersatz `LocalStore` (out/store.json)
-  - [ ] 1.7 Mail, 1.8 main + Mocks + Workflow
+  - [x] 1.7 Mailer (`mailer.py`, `templates/email.html.j2`): HTML mit Inline-CSS + Dark-Mode, SMTP oder Datei `out/mail.html`
+  - [ ] 1.8 main.py + Mocks (Lauf ohne Zugangsdaten) + GitHub-Workflows (daily.yml, tests.yml) + SETUP_TODO
 - Phase 2: Ausgaben (Reminder, .ics, GitHub Pages) – offen
 - Phase 3: Mehr Quellen (Quellenseiten, Gmail) – offen
 
 ## Als Nächstes
-1.7 Mailer (`mailer.py`, `templates/email.html.j2`).
+1.8 `src/main.py`, `src/mocks.py`, Workflows.
 
 ## Offene Probleme
 - keine

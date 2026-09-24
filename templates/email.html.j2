@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<title>{{ subject }}</title>
+<style>
+  /* Dark Mode für Mail-Programme, die <style> unterstützen; die Inline-Farben sind die helle Variante. */
+  @media (prefers-color-scheme: dark) {
+    .bg { background: #0f1115 !important; }
+    .card { background: #1a1d24 !important; border-color: #2a2f3a !important; }
+    .txt { color: #e6e8ec !important; }
+    .muted { color: #9aa3b2 !important; }
+    .chip { background: #3a2f12 !important; color: #ffd98a !important; }
+    a.title { color: #8ab4ff !important; }
+  }
+  @media (max-width: 600px) { .wrap { padding: 12px !important; } }
+</style>
+</head>
+<body class="bg" style="margin:0;padding:0;background:#f3f4f7;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" class="bg" style="background:#f3f4f7;">
+<tr><td align="center" class="wrap" style="padding:24px;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;">
+
+  <tr><td class="txt" style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1b1f27;padding:0 0 12px 0;">
+    <div style="font-size:22px;font-weight:700;">Opportunity-Finder</div>
+    <div class="muted" style="font-size:14px;color:#5b6472;">{{ datum }}</div>
+  </td></tr>
+
+{% macro card(o, show_score=True) %}
+  <tr><td style="padding:0 0 12px 0;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" class="card"
+           style="background:#ffffff;border:1px solid #e3e6ec;border-radius:12px;">
+    <tr><td class="txt" style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1b1f27;padding:16px;">
+      <a class="title" href="{{ o.url }}" style="font-size:17px;font-weight:700;color:#1a56db;text-decoration:none;">{{ o.title }}</a>
+      <div class="muted" style="font-size:13px;color:#5b6472;margin-top:2px;">{{ o.organizer }}</div>
+      {% if show_score and o.score is not none %}
+      <div style="margin-top:10px;font-size:14px;">
+        <span style="display:inline-block;background:#1a56db;color:#ffffff;border-radius:999px;padding:2px 10px;font-weight:700;">{{ o.score }}/100</span>
+        <span class="txt" style="margin-left:6px;">{{ o.score_reason }}</span>
+      </div>
+      {% endif %}
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:10px;font-size:14px;">
+        <tr><td class="muted" style="color:#5b6472;width:110px;padding:2px 0;">Deadline</td><td class="txt" style="padding:2px 0;">{{ o.deadline_text }}</td></tr>
+        <tr><td class="muted" style="color:#5b6472;padding:2px 0;">Ort</td><td class="txt" style="padding:2px 0;">{{ o.place_text }}</td></tr>
+        <tr><td class="muted" style="color:#5b6472;padding:2px 0;">Kosten / Förderung</td><td class="txt" style="padding:2px 0;">{{ o.money_text }}</td></tr>
+        <tr><td class="muted" style="color:#5b6472;padding:2px 0;">Voraussetzungen</td><td class="txt" style="padding:2px 0;">{{ o.eligibility or 'unklar' }}</td></tr>
+        <tr><td class="muted" style="color:#5b6472;padding:2px 0;">Aufwand</td><td class="txt" style="padding:2px 0;">{{ o.effort }}</td></tr>
+      </table>
+      {% if o.warnings %}
+      <div style="margin-top:10px;">
+        {% for w in o.warnings %}<span class="chip" style="display:inline-block;background:#fff4d6;color:#7a5200;border-radius:6px;padding:2px 8px;margin:0 6px 4px 0;font-size:12px;">⚠ {{ w }}</span>{% endfor %}
+      </div>
+      {% endif %}
+    </td></tr>
+    </table>
+  </td></tr>
+{% endmacro %}
+
+{% if reminders %}
+  <tr><td class="txt" style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1b1f27;font-size:16px;font-weight:700;padding:12px 0 8px 0;">⏰ Deadlines bald</td></tr>
+  {% for o, days in reminders %}
+  <tr><td class="txt" style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1b1f27;padding:0 0 8px 0;font-size:14px;">
+    <strong>{{ 'Morgen' if days == 1 else ('Heute' if days == 0 else 'In ' ~ days ~ ' Tagen') }}:</strong>
+    <a class="title" href="{{ o.url }}" style="color:#1a56db;">{{ o.title }}</a> ({{ o.deadline_text }})
+  </td></tr>
+  {% endfor %}
+{% endif %}
+
+{% if top %}
+  <tr><td class="txt" style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1b1f27;font-size:16px;font-weight:700;padding:12px 0 8px 0;">✨ Neue Top-Matches</td></tr>
+  {% for o in top %}{{ card(o) }}{% endfor %}
+{% endif %}
+
+{% if projects %}
+  <tr><td class="txt" style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1b1f27;font-size:16px;font-weight:700;padding:12px 0 8px 0;">🚀 Projektförderung</td></tr>
+  {% for o in projects %}{{ card(o) }}{% endfor %}
+{% endif %}
+
+  <tr><td class="muted" style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#5b6472;font-size:12px;padding:12px 0;">
+    Automatisch erstellt. Status und Notizen pflegst du im Google Sheet.
+  </td></tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>
