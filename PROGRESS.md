@@ -22,12 +22,13 @@ Eine neue Session muss allein mit dieser Datei + `SPEC.md` + `SETUP_TODO.md` wei
   - [x] 1.2 Harte Filter (`filters.py`, alle 11 einzeln getestet, Warnungen bei unklar)
   - [x] 1.3 Scoring (`scoring.py`: Gesamtscore in Python, Gemini nur für weiche Teilwerte)
   - [x] 1.4 Dedupe (`dedupe.py`)
-  - [ ] 1.5 Gemini/Collect/Verify/Extract, 1.6 Sheets, 1.7 Mail, 1.8 main + Mocks + Workflow
+  - [x] 1.5 Gemini-Wrapper mit Budget (`gemini.py`), Collect, Verify (Link-Prüfung), Extract (Zitat-Pflicht für Daten)
+  - [ ] 1.6 Sheets, 1.7 Mail, 1.8 main + Mocks + Workflow
 - Phase 2: Ausgaben (Reminder, .ics, GitHub Pages) – offen
 - Phase 3: Mehr Quellen (Quellenseiten, Gmail) – offen
 
 ## Als Nächstes
-1.5 Gemini-Client, Collect, Verify, Extract.
+1.6 Sheets (`sheets.py`) + lokaler Ersatzspeicher.
 
 ## Offene Probleme
 - keine
