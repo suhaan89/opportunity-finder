@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex">
+<title>Opportunity-Finder</title>
+<style>
+  :root {
+    --bg: #f4f5f9; --card: #ffffff; --text: #171a21; --muted: #5d6675; --line: #e2e5ec;
+    --accent: #4f46e5; --accent-soft: #eceafd; --good: #0f766e; --good-soft: #dcf5f1;
+    --shadow: 0 1px 2px rgba(16,24,40,.06), 0 4px 14px rgba(16,24,40,.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1015; --card: #171a22; --text: #e8eaf0; --muted: #9aa3b2; --line: #272c37;
+      --accent: #8b93ff; --accent-soft: #23264a; --good: #5eead4; --good-soft: #12332f;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.5 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 24px 16px 48px; }
+  header h1 { margin: 0; font-size: clamp(1.6rem, 4vw, 2.2rem); letter-spacing: -.02em; }
+  header p { margin: 4px 0 0; color: var(--muted); }
+  .filters { display: grid; gap: 10px; margin: 20px 0 8px;
+             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  .filters input, .filters select {
+    width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--card); color: var(--text); font: inherit; }
+  .filters input { grid-column: 1 / -1; }
+  @media (min-width: 720px) { .filters input { grid-column: auto; grid-column-end: span 2; } }
+  .count { color: var(--muted); font-size: .9rem; margin: 6px 2px 14px; }
+  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px;
+          box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 8px; }
+  .card[hidden] { display: none; }
+  .card h2 { margin: 0; font-size: 1.05rem; line-height: 1.3; }
+  .card h2 a { color: var(--text); text-decoration: none; }
+  .card h2 a:hover { color: var(--accent); text-decoration: underline; }
+  .org { color: var(--muted); font-size: .88rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-size: .75rem; padding: 2px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .chip.good { background: var(--good-soft); color: var(--good); }
+  dl { margin: 4px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-size: .9rem; }
+  dt { color: var(--muted); }
+  dd { margin: 0; }
+  .elig { font-size: .88rem; color: var(--muted); }
+  .cta { margin-top: auto; padding-top: 6px; }
+  .cta a { display: inline-block; padding: 8px 14px; border-radius: 10px; background: var(--accent); color: #fff;
+           text-decoration: none; font-weight: 600; font-size: .9rem; }
+  .cta a:hover { filter: brightness(1.1); }
+  .empty { text-align: center; color: var(--muted); padding: 40px 0; }
+  footer { margin-top: 28px; color: var(--muted); font-size: .8rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Opportunity-Finder</h1>
+    <p>Events, Stipendien, Wettbewerbe und Förderungen · Stand {{ stand }}</p>
+  </header>
+
+  <div class="filters" role="search">
+    <input id="q" type="search" placeholder="Suchen …" aria-label="Suchen">
+    <select id="f-cat" aria-label="Kategorie">
+      <option value="">Alle Kategorien</option>
+      {% for key, label in categories %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+    </select>
+    <select id="f-country" aria-label="Land">
+      <option value="">Alle Länder</option>
+      {% for c in countries %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+    </select>
+    <select id="f-format" aria-label="Format">
+      <option value="">Online &amp; Präsenz</option>
+      <option value="praesenz">Präsenz</option>
+      <option value="online">Online</option>
+      <option value="hybrid">Hybrid</option>
+    </select>
+    <select id="f-deadline" aria-label="Deadline">
+      <option value="">Alle Deadlines</option>
+      <option value="30">Nächste 30 Tage</option>
+      <option value="90">Nächste 90 Tage</option>
+      <option value="none">Ohne Datum</option>
+    </select>
+  </div>
+  <div class="count" id="count" aria-live="polite"></div>
+
+  <main class="grid" id="grid">
+  {% for i in items %}
+    <article class="card" data-cat="{{ i.category }}" data-country="{{ i.country }}" data-format="{{ i.format }}"
+             data-deadline="{{ i.deadline_iso }}" data-text="{{ (i.title ~ ' ' ~ i.organizer ~ ' ' ~ i.city ~ ' ' ~ i.country ~ ' ' ~ i.eligibility)|lower }}">
+      <div class="chips">
+        <span class="chip">{{ i.category_label }}</span>
+        <span class="chip">{{ i.format_label }}</span>
+        {% for f in i.funding %}<span class="chip good">{{ f }}</span>{% endfor %}
+      </div>
+      <h2><a href="{{ i.url }}" rel="noopener noreferrer" target="_blank">{{ i.title }}</a></h2>
+      <div class="org">{{ i.organizer }}</div>
+      <dl>
+        <dt>Deadline</dt><dd>{{ i.deadline_text }}</dd>
+        {% if i.event_text %}<dt>Termin</dt><dd>{{ i.event_text }}</dd>{% endif %}
+        {% if i.city or i.country %}<dt>Ort</dt><dd>{{ [i.city, i.country]|select|join(', ') }}</dd>{% endif %}
+        <dt>Kosten</dt><dd>{{ i.fee }}</dd>
+        {% if i.benefits %}<dt>Vorteile</dt><dd>{{ i.benefits|join(', ') }}</dd>{% endif %}
+      </dl>
+      {% if i.eligibility %}<div class="elig">{{ i.eligibility }}</div>{% endif %}
+      <div class="cta"><a href="{{ i.url }}" rel="noopener noreferrer" target="_blank">Zur Seite</a></div>
+    </article>
+  {% endfor %}
+  </main>
+  <div class="empty" id="empty" hidden>Keine Treffer für diese Filter.</div>
+
+  <footer>Automatisch erstellt. Angaben ohne Gewähr, bitte immer auf der Original-Seite prüfen.</footer>
+</div>
+
+<script>
+(function () {
+  var cards = Array.prototype.slice.call(document.querySelectorAll('.card'));
+  var q = document.getElementById('q'), cat = document.getElementById('f-cat'),
+      country = document.getElementById('f-country'), fmt = document.getElementById('f-format'),
+      dl = document.getElementById('f-deadline'), count = document.getElementById('count'),
+      empty = document.getElementById('empty');
+
+  function dayDiff(iso) {
+    var d = new Date(iso + 'T00:00:00'), t = new Date(); t.setHours(0, 0, 0, 0);
+    return Math.round((d - t) / 86400000);
+  }
+  function apply() {
+    var text = q.value.trim().toLowerCase(), shown = 0;
+    cards.forEach(function (c) {
+      var ok = true, d = c.dataset.deadline;
+      if (text && c.dataset.text.indexOf(text) === -1) ok = false;
+      if (cat.value && c.dataset.cat !== cat.value) ok = false;
+      if (country.value && c.dataset.country !== country.value) ok = false;
+      if (fmt.value && c.dataset.format !== fmt.value) ok = false;
+      if (dl.value === 'none' && d) ok = false;
+      if ((dl.value === '30' || dl.value === '90') && (!d || dayDiff(d) > parseInt(dl.value, 10))) ok = false;
+      c.hidden = !ok;
+      if (ok) shown++;
+    });
+    count.textContent = shown + ' von ' + cards.length + ' Angeboten';
+    empty.hidden = shown !== 0;
+  }
+  [q, cat, country, fmt, dl].forEach(function (el) { el.addEventListener('input', apply); });
+  apply();
+})();
+</script>
+</body>
+</html>
