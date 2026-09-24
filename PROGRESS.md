@@ -14,6 +14,7 @@ Eine neue Session muss allein mit dieser Datei + `SPEC.md` + `SETUP_TODO.md` wei
 - Python-Umgebung: `.venv` (Windows: `.venv\Scripts\python`), Tests: `.venv\Scripts\python -m pytest -q`
 - Lauf ohne Zugangsdaten: `.venv\Scripts\python -m src.main --mock` (schreibt nach `out/`, ignoriert)
 - Echter Lauf: `python -m src.main` (mit `.env`); in Actions: `python -m src.main --real` (bricht ab, wenn Secrets fehlen)
+- Einrichtung prüfen: `.venv\Scripts\python -m src.check [--live]` (zeigt fehlende Werte, testet Verbindungen; keine Werte im Output)
 - Git-Autor in diesem Repo: `suhannawaz331@gmail.com` (lokal gesetzt, wegen GitHub-Mail-Schutz)
 - Echtes Profil nur lokal in `profile.yaml` (ignoriert). `SPEC.md` im Repo ist bereinigt (fiktives Profil).
   Die Original-SPEC liegt auf dem Desktop (dort steht noch das ungültige YAML bei `projekte:`).
@@ -92,6 +93,7 @@ Im öffentlichen Log stehen nur Zahlen (z. B. „kandidaten=8, gefiltert=4"), ni
 - Extraktion + Bewertung kosten je 1 Gemini-Aufruf pro Eintrag; Extraktion nutzt max. die Hälfte des Restbudgets.
 
 ## Offene Probleme
+- Nutzer hat entschieden: Geburtsdatum bleibt in der Git-Historie (Commit 6cbb369ff. enthält es in einem Docstring); keine Historien-Bereinigung nötig.
 - Echtlauf gegen Gemini/Sheets/SMTP noch nicht getestet (fehlende Zugangsdaten → `SETUP_TODO.md`). Die Anbindung ist
   gegen Attrappen getestet; beim ersten echten Lauf können API-Details (Modellname, Grounding-Limits) Anpassungen brauchen.
 - Modellname `gemini-2.5-flash` ist eine Annahme; in `config/settings.yaml` prüfen.
