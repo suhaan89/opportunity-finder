@@ -6,10 +6,12 @@ Filtern -> Bewerten -> Speichern -> Mail), ohne Gemini, Google Sheets oder Gmail
 """
 from __future__ import annotations
 
+import re
 from datetime import date, timedelta
 from typing import Any
 
 from .gemini import SearchHit, SearchResult
+from .gmail_reader import MailDoc
 from .verify import Page
 
 
@@ -47,10 +49,12 @@ def build_fixtures(today: date) -> dict[str, dict[str, Any]]:
 
     fx: dict[str, dict[str, Any]] = {}
 
-    def add(key: str, title: str, deadline: date, extra: str = "", **kw: Any) -> None:
+    def add(key: str, title: str, deadline: date, extra: str = "", hidden: bool = False, **kw: Any) -> None:
+        """hidden=True: die Suche findet das nicht, nur Quellenseite oder Newsletter verlinken es."""
         fx[f"https://example.org/{key}"] = {
             "page": Page(url=f"https://example.org/{key}", title=title, text=page(key, title, deadline, extra)),
             "extract": data(title=title, **dates(deadline), **kw),
+            "hidden": hidden,
         }
 
     add("ki-akademie", "Sommerakademie Künstliche Intelligenz", future,
@@ -67,7 +71,47 @@ def build_fixtures(today: date) -> dict[str, dict[str, Any]]:
         target="projekt", category="projektfoerderung", benefits=["credits"], format="online",
         eligibility="Schulprojekte mit KI-Bezug", location_country="Deutschland", location_city="")
     add("teuer", "Premium-Camp Silicon Valley", future, fee_eur=4200, location_country="USA")
+    # Nur über die Quellenseite bzw. den Newsletter auffindbar (Phase 3)
+    add("quellen-stipendium", "Stipendium für junge Programmierer", future, hidden=True,
+        category="stipendium", location_country="Deutschland", benefits=["geld"], travel_covered="ja")
+    add("mail-programm", "Nachwuchs-Forum Digitalisierung", future, hidden=True,
+        category="jugendforum", location_country="Deutschland", travel_covered="ja")
+    # Fiktive Quellenseite mit Links (ein Abmelde-Link ist absichtlich dabei)
+    quelle = "https://example.org/quelle"
+    fx[quelle] = {
+        "page": Page(
+            url=quelle, title="Mock-Quelle", text="Übersicht aktueller Angebote. " * 20,
+            links=[
+                ("Stipendium für junge Programmierer", "https://example.org/quellen-stipendium"),
+                ("Abmelden", "https://example.org/unsubscribe?id=1"),
+                ("Impressum", "https://example.org/impressum"),
+            ],
+        ),
+        "extract": None,
+        "hidden": True,
+    }
     return fx
+
+
+def mock_sources_config() -> list[dict[str, Any]]:
+    """Im Mock-Modus gibt es nur die fiktive Quellenseite (keine echten Webseiten)."""
+    return [{"name": "Mock-Quelle", "url": "https://example.org/quelle", "priority": "hoch", "enabled": True}]
+
+
+class MockMailReader:
+    """Fiktive Newsletter-Mail mit einem Angebot und einem Abmelde-Link."""
+
+    def __init__(self, fixtures: dict[str, dict[str, Any]]) -> None:
+        self.fixtures = fixtures
+
+    def fetch_documents(self, label: str, newer_than_days: int, max_messages: int) -> list[MailDoc]:
+        return [MailDoc(
+            text="Unser Newsletter mit einem neuen Angebot für Schüler. " * 5,
+            links=[
+                ("Nachwuchs-Forum Digitalisierung", "https://example.org/mail-programm"),
+                ("Newsletter abbestellen", "https://example.org/unsubscribe/abc"),
+            ],
+        )]
 
 
 class MockFetcher:
@@ -91,7 +135,7 @@ class MockGemini:
     def search(self, query: str, today: str) -> SearchResult:
         if not self.budget.take():
             return SearchResult()
-        hits = [SearchHit(v["page"].title, url) for url, v in self.fixtures.items()]
+        hits = [SearchHit(v["page"].title, url) for url, v in self.fixtures.items() if not v.get("hidden")]
         hits.append(SearchHit("Toter Link", "https://example.org/gibt-es-nicht"))
         return SearchResult(hits=hits)
 
@@ -100,6 +144,8 @@ class MockGemini:
             return None
         if purpose == "extract":
             for entry in self.fixtures.values():
+                if not entry.get("extract"):
+                    continue
                 key = entry["page"].text.rsplit("[[fx:", 1)[-1].split("]]")[0]
                 if f"[[fx:{key}]]" in prompt:
                     return dict(entry["extract"])
@@ -117,5 +163,9 @@ class MockGemini:
                 "regional": False, "reason": "Passt gut zu deinen KI-Interessen (Mock-Bewertung).",
             }
         if purpose == "list_page":
-            return {"items": []}
+            links_teil = prompt.split("LINKS:", 1)[-1]
+            urls = re.findall(r"\| (https://example\.org/\S+)", links_teil)
+            items = [{"title": self.fixtures[u]["page"].title, "url": u}
+                     for u in urls if u in self.fixtures and self.fixtures[u].get("extract")]
+            return {"items": items}
         return None

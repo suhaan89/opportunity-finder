@@ -15,15 +15,19 @@ from dataclasses import dataclass, field
 from datetime import date
 from typing import Any
 
-from .collect import Candidate, collect_from_search, select_queries, unique_candidates
+from .collect import (
+    Candidate, collect_from_mail, collect_from_pages, collect_from_search, select_pages,
+    select_queries, unique_candidates,
+)
 from .config import ROOT, load_settings, load_sources
 from .dedupe import dedupe_batch
 from .extract import extract_opportunity
 from .filters import add_warnings, apply_post_score_filters, apply_pre_score_filters
 from .gemini import Budget, GeminiClient
+from .gmail_reader import GmailReader
 from .ics import build_ics, publish_gist, write_local
 from .mailer import MailContent, build_mail_content, render_email, send_email
-from .mocks import MockFetcher, MockGemini, build_fixtures
+from .mocks import MockFetcher, MockGemini, MockMailReader, build_fixtures, mock_sources_config
 from .models import Opportunity
 from .profile import load_profile
 from .reminders import deadline_reminders
@@ -69,6 +73,7 @@ class Services:
     profile: dict[str, Any]
     today: date
     is_mock: bool = False
+    mail_reader: Any = None      # Gmail-Reader (oder Mock); None = keine Newsletter
 
 
 @dataclass
@@ -85,9 +90,10 @@ def build_services(mock: bool) -> Services:
     api_key = os.environ.get("GEMINI_API_KEY", "").strip()
     if mock or not api_key:
         fixtures = build_fixtures(today)
+        sources = {**sources, "pages": mock_sources_config()}  # im Mock-Modus keine echten Webseiten
         return Services(
             MockGemini(fixtures, budget), MockFetcher(fixtures), LocalStore(), budget,
-            settings, sources, profile, today, is_mock=True,
+            settings, sources, profile, today, is_mock=True, mail_reader=MockMailReader(fixtures),
         )
     g = settings["gemini"]
     fetch = settings.get("fetch", {})
@@ -95,7 +101,7 @@ def build_services(mock: bool) -> Services:
     return Services(
         GeminiClient(api_key, g["model"], budget, g.get("seconds_between_calls", 5)),
         Fetcher(fetch.get("timeout_seconds", 15), fetch.get("max_chars", 12000), fetch.get("user_agent", "opportunity-finder")),
-        store, budget, settings, sources, profile, today,
+        store, budget, settings, sources, profile, today, mail_reader=GmailReader.from_env(),
     )
 
 
@@ -104,13 +110,42 @@ def _count(counts: dict[str, int], key: str, n: int = 1) -> None:
 
 
 def gather_candidates(svc: Services, counts: dict[str, int]) -> list[Candidate]:
-    """Schritt 1: Collect. (Quellenseiten und Gmail kommen in Phase 3 dazu.)"""
+    """Schritt 1: Collect aus Gemini-Suche, Quellenseiten und Gmail-Newsletter.
+
+    Jede Quelle ist einzeln abgesichert: Fällt eine aus, laufen die anderen weiter.
+    Quellenseiten und Mails bekommen höchstens je ein Viertel des Restbudgets.
+    """
     cfg = svc.settings["gemini"]
-    queries = select_queries(svc.sources.get("queries", []), cfg.get("searches_per_run", 6), svc.today.toordinal())
-    cands, failed = collect_from_search(svc.gemini, queries, svc.today)
+    day = svc.today.toordinal()
+    cands: list[Candidate] = []
+
+    # a) Gemini-Suche
+    queries = select_queries(svc.sources.get("queries", []), cfg.get("searches_per_run", 6), day)
+    found, failed = collect_from_search(svc.gemini, queries, svc.today)
+    cands += found
     counts["suchanfragen"] = len(queries)
     _count(counts, "fehler", failed)
-    return cands
+
+    # b) kuratierte Quellenseiten (sources.yaml)
+    max_pages = min(svc.settings.get("sources", {}).get("max_pages_per_run", 6), svc.budget.remaining // 4)
+    pages = select_pages(svc.sources.get("pages", []), max_pages, day)
+    found, failed = collect_from_pages(svc.gemini, svc.fetcher, pages)
+    cands += found
+    counts["quellen"] = len(pages)
+    _count(counts, "fehler", failed)
+
+    # c) Gmail-Newsletter (nur wenn Zugang eingerichtet ist)
+    if svc.mail_reader is not None:
+        gm = svc.settings.get("gmail", {})
+        max_mails = min(gm.get("max_messages", 10), svc.budget.remaining // 4)
+        found, n_mails, failed = collect_from_mail(
+            svc.gemini, svc.mail_reader, gm.get("label", "Opportunity-Finder"),
+            gm.get("newer_than_days", 3), max_mails,
+        )
+        cands += found
+        counts["mails"] = n_mails
+        _count(counts, "fehler", failed)
+    return unique_candidates(cands)
 
 
 def run_pipeline(svc: Services) -> RunResult:
@@ -121,7 +156,7 @@ def run_pipeline(svc: Services) -> RunResult:
     seen_again: set[str] = set()
 
     # 1. Collect
-    cands = unique_candidates(gather_candidates(svc, counts))
+    cands = gather_candidates(svc, counts)
     counts["kandidaten"] = len(cands)
 
     # Schon bekannte Seiten überspringen (spart Abrufe und Gemini-Aufrufe)
