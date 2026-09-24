@@ -1,0 +1,54 @@
+# Einstellungen (öffentlich, keine persönlichen Daten!)
+
+gemini:
+  model: gemini-2.5-flash        # Modellname NUR hier ändern, nie im Code
+  max_calls_per_run: 40          # Budget-Schutz: maximale Gemini-Aufrufe pro Lauf
+  searches_per_run: 6            # so viele Suchanfragen werden pro Lauf gestellt (rotierend)
+  seconds_between_calls: 5       # Pause zwischen Aufrufen (Free-Tier-Ratelimit)
+
+fetch:
+  timeout_seconds: 15
+  max_chars: 12000               # so viel Seitentext bekommt Gemini höchstens
+  user_agent: "opportunity-finder/1.0 (persoenliches Projekt)"
+
+dedupe:
+  title_similarity: 0.88         # ab diesem Wert (0..1) gelten zwei Titel als gleich
+
+scoring:
+  weights:                       # Summe = 1.0
+    interest_fit: 0.35
+    funding: 0.20
+    prestige: 0.20
+    career: 0.15
+    network: 0.05
+    feasibility: 0.05
+  fully_funded_bonus: 10         # Bonus für voll finanziert + international
+  online_min_prestige: 85        # Online-Ausnahme
+  regional_min_prestige: 80      # Regional-Ausnahme
+  top_provider_prestige_floor: 90
+  top_providers:                 # bekannte Top-Anbieter (Prestige mindestens der Floor-Wert)
+    - Studienstiftung
+    - Jugend forscht
+    - Deutsche SchülerAkademie
+    - Hasso-Plattner
+    - DAAD
+    - Google
+    - MIT
+    - Stanford
+    - Harvard
+    - ETH
+    - CERN
+    - Max-Planck
+    - Fraunhofer
+
+mail:
+  min_score: 70                  # E-Mail-Schwelle
+  reminder_days: [7, 2]          # Deadline-Reminder: so viele Tage vorher
+
+gmail:
+  label: Opportunity-Finder      # nur Mails mit diesem Label werden gelesen (Phase 3)
+  max_messages: 10
+  newer_than_days: 3
+
+sources:
+  max_pages_per_run: 6           # so viele Quellenseiten pro Lauf (rotierend, kostet Gemini-Aufrufe)

@@ -1,0 +1,70 @@
+# Quellen (öffentlich editierbar).
+
+# a) Suchanfragen für Gemini mit Google Search (rotierend)
+queries:
+  - fully funded summer program high school students AI
+  - KI Wettbewerb Schüler 2027
+  - Schülerstipendium Deutschland Informatik
+  - international youth summit fully funded 2027
+  - Hackathon Schüler Deutschland
+  - Sommerakademie Schüler MINT
+  - pre-college research program AI scholarship
+  - youth startup incubator Europe students
+  - Förderung Schülerfirma Projekt KI
+  - cloud credits nonprofit student project
+
+# b) Kuratierte Quellenseiten (Phase 3): werden direkt geladen und ausgewertet.
+# enabled: false oder leere url = wird übersprungen. URLs bitte gelegentlich prüfen!
+pages:
+  - name: Young Founders Network
+    url: ""                      # TODO: URL eintragen (siehe SETUP_TODO.md)
+    priority: hoch
+    enabled: false
+  - name: young leaders
+    url: ""                      # TODO: URL eintragen (siehe SETUP_TODO.md)
+    priority: mittel
+    enabled: false
+  - name: European Youth Portal
+    url: https://youth.europa.eu/
+    priority: niedrig
+    enabled: true
+  - name: SALTO-YOUTH
+    url: https://www.salto-youth.net/
+    priority: niedrig
+    enabled: true
+  - name: Deutsche SchülerAkademie
+    url: https://www.deutsche-schuelerakademie.de/
+    priority: mittel
+    enabled: true
+  - name: Jugend forscht
+    url: https://www.jugend-forscht.de/
+    priority: mittel
+    enabled: true
+  - name: Bundesweite Informatikwettbewerbe
+    url: https://bwinf.de/
+    priority: mittel
+    enabled: true
+  - name: Studienstiftung
+    url: https://www.studienstiftung.de/
+    priority: mittel
+    enabled: true
+  - name: e-fellows.net
+    url: https://www.e-fellows.net/
+    priority: niedrig
+    enabled: true
+  - name: Stiftung Bildung
+    url: https://www.stiftungbildung.org/
+    priority: niedrig
+    enabled: true
+  - name: Start-up Teens
+    url: https://www.startupteens.de/
+    priority: mittel
+    enabled: true
+  - name: Devpost Hackathons
+    url: https://devpost.com/hackathons
+    priority: niedrig
+    enabled: true
+  - name: Major League Hacking
+    url: https://mlh.io/events
+    priority: niedrig
+    enabled: true

@@ -1,0 +1,10 @@
+# Jede Abhängigkeit mit kurzer Begründung (SPEC Abschnitt 12)
+google-genai>=2.0      # Gemini-API (Suche mit Google-Grounding, JSON-Antworten)
+gspread>=6.0           # Google Sheets als Datenbank
+google-auth>=2.0       # Anmeldung mit dem Service-Account (kommt mit gspread, hier explizit)
+requests>=2.30         # Webseiten laden, GitHub-Gist-API, Gmail-REST
+beautifulsoup4>=4.12   # Text und Links aus HTML holen
+PyYAML>=6.0            # Konfiguration und Profil lesen
+Jinja2>=3.1            # HTML-Vorlagen für E-Mail und Webseite
+jsonschema>=4.0        # Gemini-Antworten gegen ein Schema prüfen
+tzdata>=2024.1         # Zeitzone Europe/Berlin (unter Windows nötig)
