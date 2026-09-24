@@ -23,12 +23,13 @@ Eine neue Session muss allein mit dieser Datei + `SPEC.md` + `SETUP_TODO.md` wei
   - [x] 1.3 Scoring (`scoring.py`: Gesamtscore in Python, Gemini nur für weiche Teilwerte)
   - [x] 1.4 Dedupe (`dedupe.py`)
   - [x] 1.5 Gemini-Wrapper mit Budget (`gemini.py`), Collect, Verify (Link-Prüfung), Extract (Zitat-Pflicht für Daten)
-  - [ ] 1.6 Sheets, 1.7 Mail, 1.8 main + Mocks + Workflow
+  - [x] 1.6 Speicher (`sheets.py`): Google Sheets (Tabs Aktiv/Archiv/Projekte/Log) + lokaler Ersatz `LocalStore` (out/store.json)
+  - [ ] 1.7 Mail, 1.8 main + Mocks + Workflow
 - Phase 2: Ausgaben (Reminder, .ics, GitHub Pages) – offen
 - Phase 3: Mehr Quellen (Quellenseiten, Gmail) – offen
 
 ## Als Nächstes
-1.6 Sheets (`sheets.py`) + lokaler Ersatzspeicher.
+1.7 Mailer (`mailer.py`, `templates/email.html.j2`).
 
 ## Offene Probleme
 - keine
