@@ -15,11 +15,12 @@ Lokaler Ordner: `C:\Users\User\opportunity-finder`, Remote: github.com/suhaan89/
 ## Status
 - [x] Schritt 0: `.gitignore`, `.env.example`, bereinigte `SPEC.md`, Beispielprofil
 - [ ] Phase 1: Kern (MVP)
+  - [x] 1.1 Gerüst: requirements, settings/sources.yaml, config, Profil-Loader, Datenmodell (`models.py`), Hilfsfunktionen (`util.py`)
 - [ ] Phase 2: Ausgaben
 - [ ] Phase 3: Mehr Quellen
 
 ## Als Nächstes
-Phase 1: Projektgerüst (requirements, config, Profil-Loader, Datenmodell).
+1.2 Filter (`filters.py`) mit Tests.
 
 ## Offene Probleme
 - keine
