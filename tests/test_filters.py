@@ -102,6 +102,8 @@ def test_online_und_regional_ausnahme():
     assert apply_post_score_filters(opp(regional=True, prestige=79), SETTINGS) == "regional"
     assert apply_post_score_filters(opp(regional=True, prestige=80), SETTINGS) is None
     assert apply_post_score_filters(opp(format="praesenz", prestige=10), SETTINGS) is None
+    # Projektförderung ist von Online-/Regional-Filter ausgenommen (Entscheidung, siehe PROGRESS.md)
+    assert apply_post_score_filters(opp(target="projekt", format="online", prestige=10), SETTINGS) is None
 
 
 def test_sammel_filter_gibt_ersten_grund():

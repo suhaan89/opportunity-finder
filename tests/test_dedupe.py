@@ -29,4 +29,4 @@ def test_batch_gegen_vorhandene_und_untereinander():
     neu = [o("2", "Sommerakademie MINT"), o("3", "KI Camp"), o("4", "KI Camp"), o("1", "egal")]
     behalten, entfernt = dedupe_batch(neu, vorhanden)
     assert [x.id for x in behalten] == ["3"]
-    assert entfernt == 3
+    assert [x.id for x in entfernt] == ["2", "4", "1"]

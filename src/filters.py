@@ -145,6 +145,8 @@ def apply_pre_score_filters(o: Opportunity, profile: dict[str, Any], today: date
 
 def filter_online(o: Opportunity, settings: dict[str, Any]) -> str | None:
     """10. Online nur mit Prestige >= Schwelle (Online-Ausnahme, Standard 85)."""
+    if o.target == "projekt":  # Projektförderung (Credits, Geld) ist fast immer online: nicht filtern
+        return None
     minimum = settings.get("scoring", {}).get("online_min_prestige", 85)
     if o.format == "online" and (o.prestige or 0) < minimum:
         return "online"
@@ -153,6 +155,8 @@ def filter_online(o: Opportunity, settings: dict[str, Any]) -> str | None:
 
 def filter_regional(o: Opportunity, settings: dict[str, Any]) -> str | None:
     """11. Im Regionalradius nur mit Prestige >= Schwelle (Regional-Ausnahme, Standard 80)."""
+    if o.target == "projekt":
+        return None
     minimum = settings.get("scoring", {}).get("regional_min_prestige", 80)
     if o.regional and (o.prestige or 0) < minimum:
         return "regional"

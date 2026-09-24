@@ -19,6 +19,9 @@ from .config import ROOT
 from .models import Opportunity
 
 
+OUT_DIR = ROOT / "out"  # hierhin wird die Mail geschrieben, wenn kein SMTP-Zugang da ist
+
+
 @dataclass
 class MailContent:
     top: list[Opportunity] = field(default_factory=list)          # neue Top-Matches (Personen)
@@ -108,7 +111,7 @@ def send_email(subject: str, html: str, out_dir: Any = None) -> bool:
     password = os.environ.get("SMTP_APP_PASSWORD", "").strip()
     to = os.environ.get("MAIL_TO", "").strip() or user
     if not (user and password and to):
-        out = (out_dir or ROOT / "out")
+        out = out_dir or OUT_DIR
         out.mkdir(parents=True, exist_ok=True)
         (out / "mail.html").write_text(html, encoding="utf-8")
         return False

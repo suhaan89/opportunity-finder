@@ -30,16 +30,16 @@ def is_duplicate(o: Opportunity, other: Opportunity, threshold: float = 0.88) ->
 
 def dedupe_batch(
     neu: list[Opportunity], vorhanden: list[Opportunity], threshold: float = 0.88
-) -> tuple[list[Opportunity], int]:
+) -> tuple[list[Opportunity], list[Opportunity]]:
     """Entfernt aus `neu` alles, was schon in `vorhanden` steht oder doppelt in `neu` vorkommt.
 
-    Gibt (behaltene Einträge, Anzahl entfernter) zurück.
+    Gibt (behaltene Einträge, entfernte Einträge) zurück.
     """
     behalten: list[Opportunity] = []
+    entfernt: list[Opportunity] = []
     for o in neu:
-        if any(is_duplicate(o, x, threshold) for x in vorhanden):
-            continue
-        if any(is_duplicate(o, x, threshold) for x in behalten):
-            continue
-        behalten.append(o)
-    return behalten, len(neu) - len(behalten)
+        if any(is_duplicate(o, x, threshold) for x in vorhanden + behalten):
+            entfernt.append(o)
+        else:
+            behalten.append(o)
+    return behalten, entfernt
