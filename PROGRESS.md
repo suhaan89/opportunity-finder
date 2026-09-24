@@ -93,7 +93,7 @@ Im öffentlichen Log stehen nur Zahlen (z. B. „kandidaten=8, gefiltert=4"), ni
 - Extraktion + Bewertung kosten je 1 Gemini-Aufruf pro Eintrag; Extraktion nutzt max. die Hälfte des Restbudgets.
 
 ## Offene Probleme
-- Nutzer hat entschieden: Geburtsdatum bleibt in der Git-Historie (Commit 6cbb369ff. enthält es in einem Docstring); keine Historien-Bereinigung nötig.
+- Nutzer hat entschieden: Geburtsdatum bleibt in der Git-Historie (stand in einem früheren Commit in einem Docstring); keine Historien-Bereinigung nötig.
 - Echtlauf gegen Gemini/Sheets/SMTP noch nicht getestet (fehlende Zugangsdaten → `SETUP_TODO.md`). Die Anbindung ist
   gegen Attrappen getestet; beim ersten echten Lauf können API-Details (Modellname, Grounding-Limits) Anpassungen brauchen.
 - Modellname `gemini-2.5-flash` ist eine Annahme; in `config/settings.yaml` prüfen.
