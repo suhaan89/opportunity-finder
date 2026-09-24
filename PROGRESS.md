@@ -31,10 +31,17 @@ Eine neue Session muss allein mit dieser Datei + `SPEC.md` + `SETUP_TODO.md` wei
     `site.py` + `templates/site.html.j2` (statische Seite mit Filtern)
   - 2.2 Einbindung in `main.py` (`run_outputs`: Mail inkl. Reminder, Seite nach `public_site/`, Kalender), `pages.yml`,
     `daily.yml` lädt nur `public_site` als Artefakt hoch
-- [ ] Phase 3: Mehr Quellen (Quellenseiten aus `sources.yaml`, Gmail-Newsletter)
+- [x] **Phase 3: Mehr Quellen** – Code fertig und getestet. Echtbetrieb wartet auf `SETUP_TODO.md` Schritte 8–9.
+  - `collect.py`: Quellenseiten (`collect_from_pages`, Rotation nach Priorität) und Newsletter (`collect_from_mail`), gemeinsame
+    Link-Auswahl `pick_links` (Gemini wählt nur URLs, die wirklich in der Linkliste standen)
+  - `gmail_reader.py`: Gmail-REST nur lesend (Scope gmail.readonly), nur Label, Refresh-Token per OAuth
+  - `main.gather_candidates` kombiniert Suche + Quellen + Mails; Mock-Modus deckt alle drei Wege ab
 
 ## Als Nächstes
-Phase 3: `collect.py` um Quellenseiten erweitern (Gemini liest Listenseiten), `gmail_reader.py` (Gmail-API nur lesen, nur Label), in `main.gather_candidates` einhängen.
+Phasen 1–3 sind im Code fertig (Auftrag erfüllt). Es fehlen nur die manuellen Punkte in `SETUP_TODO.md`
+(Schritte 1–9: Gemini-Key, Service-Account + Sheet, Gmail-App-Passwort, Secrets, Pages, Gist, Quellen-URLs, Gmail-OAuth).
+Danach: ersten echten Lauf lokal (`python -m src.main`) und per „Run workflow" in Actions prüfen; Modellname/Limits ggf. anpassen.
+Nicht Teil dieses Auftrags: Phase 4 (Feedback-Lernen, jährliche Wiederholungen, Pay-to-play, Checkliste) und Phase 5 (README für andere).
 
 ## Phase 1 in einfachen Worten (was wurde gebaut?)
 Das Programm ist wie ein Fließband, das jeden Tag läuft:
@@ -59,6 +66,17 @@ Im öffentlichen Log stehen nur Zahlen (z. B. „kandidaten=8, gefiltert=4"), ni
   Eine feste Positivliste (`public_view`) bestimmt, welche Felder erscheinen; Score, Status, Notizen und Profil kommen nie darauf.
   Der Workflow „Pages" veröffentlicht sie nach jedem erfolgreichen Tageslauf.
 
+## Phase 3 in einfachen Worten (was wurde gebaut?)
+- **Quellenseiten:** Das Programm lädt Seiten aus `config/sources.yaml` (z. B. Jugend forscht, Devpost). Gemini bekommt Text und
+  Linkliste und sucht heraus, welche Links zu konkreten Angeboten führen. Erfundene Links werden von Python aussortiert
+  (nur Links, die wirklich auf der Seite standen). Danach laufen die Funde durch dieselbe Prüfung wie alles andere.
+- **Newsletter:** Über die Gmail-API werden nur Mails mit dem Label `Opportunity-Finder` gelesen (nur Lesen!). Aus jeder Mail
+  werden Angebots-Links herausgesucht und ebenfalls geprüft. Mail-Inhalte werden nie gespeichert oder geloggt.
+- **Schutz:** Abmelde-Links („unsubscribe", „abmelden" …) werden nie aufgerufen und nie an Gemini gegeben, denn schon das Öffnen
+  könnte dich vom Newsletter abmelden.
+- **Wenig Budget-Verbrauch:** Quellenseiten und Mails bekommen je höchstens ein Viertel des Gemini-Restbudgets; jede Quelle
+  fällt einzeln aus, ohne den Lauf zu stoppen.
+
 ## Entscheidungen / Abweichungen von der SPEC (bitte kurz prüfen)
 - `SPEC.md` im Repo enthält statt deines Profils ein **fiktives** Beispiel (Repo ist öffentlich).
 - Profil-YAML aus der SPEC war ungültig (`bedarf:` falsch eingerückt) → jetzt `projekte_bedarf:` (Profil, Beispiel, SPEC).
@@ -67,6 +85,8 @@ Im öffentlichen Log stehen nur Zahlen (z. B. „kandidaten=8, gefiltert=4"), ni
   bzw. „Duplikat"), damit sie nicht jeden Tag erneut Abrufe/Gemini-Aufrufe kosten.
 - Zusatzfelder im Sheet: `subject` (Fach bei Wettbewerben, für Filter 9) und `regional` (Umkreis-Einschätzung von Gemini, Filter 11).
 - Das Sheet wird pro Lauf komplett neu geschrieben: Änderungen, die du *während* des Laufs (Minuten um 05:00 UTC) machst, können verloren gehen.
+- Young Founders Network und young leaders haben in `sources.yaml` keine URL (unbekannt, nichts geraten) und sind `enabled: false`.
+- Gmail-Zugang per OAuth-Playground-Refresh-Token (Web-Client); `SETUP_TODO.md` Schritt 9 erklärt, warum „In Produktion" nötig ist.
 - Die öffentliche Seite hat `noindex` (nicht in Suchmaschinen listen) und zeigt auch Einträge aus „Projekte"; `ignoriert` wird ausgeblendet.
 - `pages.yml` läuft per `workflow_run` nach „Daily" und holt das Artefakt `site` (nur die öffentliche Seite; Artefakte öffentlicher Repos sind für alle sichtbar).
 - Extraktion + Bewertung kosten je 1 Gemini-Aufruf pro Eintrag; Extraktion nutzt max. die Hälfte des Restbudgets.

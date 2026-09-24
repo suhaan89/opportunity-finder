@@ -127,5 +127,55 @@ Windows-Hinweis: Die Befehle unten sind für die Eingabeaufforderung/PowerShell 
    Deadline-Reminder-Mails kommen für `interessant` und `in_vorbereitung` (7 und 2 Tage vorher).
    Setze also im Google Sheet in der Spalte `status` die Werte per Dropdown.
 
-## Phase 3
-(wird ergänzt, sobald die Funktionen gebaut sind)
+## 8. Weitere Quellenseiten (Phase 3)
+
+Die kuratierten Quellenseiten stehen in `config/sources.yaml` unter `pages:`. Sie laufen ohne Zusatz-Zugang
+(Gemini liest die Seite und sucht Links zu konkreten Angeboten heraus).
+
+- [ ] **Young Founders Network** und **young leaders**: Ich kenne die genauen Web-Adressen nicht und habe keine geraten.
+      Trage bei beiden die Adresse der Seite ein, auf der die aktuellen Angebote/Events aufgelistet sind
+      (`url:`), und setze `enabled: true`.
+- [ ] Die anderen Adressen (Devpost, MLH, Jugend forscht …) stammen aus meinem Wissen. Öffne sie einmal im Browser;
+      ist eine Adresse tot oder falsch, ändere sie oder setze `enabled: false`. Eine kaputte Quelle bricht den Lauf nicht ab,
+      sie erhöht nur den Zähler `fehler` im Log.
+- Pro Lauf werden höchstens `sources.max_pages_per_run` Seiten gelesen (Priorität `hoch` immer, der Rest rotiert).
+
+## 9. Gmail-Newsletter lesen (Phase 3)
+
+Das Programm liest nur Mails mit **einem bestimmten Label** und hat **nur Lesezugriff** (`gmail.readonly`).
+Es sendet, löscht oder ändert nichts. Abmelde-Links werden nie geöffnet.
+
+**a) Label und Filter in Gmail**
+1. Gmail öffnen → links **„Neues Label erstellen"** → Name: `Opportunity-Finder`
+   (muss zu `gmail.label` in `config/settings.yaml` passen).
+2. Für jeden Newsletter-Absender: eine Mail öffnen → drei Punkte → **„Ähnliche Nachrichten filtern"** → **„Filter erstellen"** →
+   **„Label anwenden: Opportunity-Finder"** (optional auch „Posteingang überspringen") → speichern.
+
+**b) Gmail API und OAuth-Zugang in Google Cloud (gleiches Projekt wie bei Google Sheets)**
+1. https://console.cloud.google.com/ → dein Projekt wählen → **„APIs & Dienste" → „Bibliothek"** → **„Gmail API"** → **Aktivieren**.
+2. **„APIs & Dienste" → „OAuth-Zustimmungsbildschirm"** (heißt je nach Oberfläche „Google Auth Platform"):
+   - App-Name z. B. `opportunity-finder`, Support-E-Mail = deine Adresse.
+   - Zielgruppe/Nutzertyp: **Extern**.
+   - Unter **Datenzugriff / Bereiche (Scopes)**: `https://www.googleapis.com/auth/gmail.readonly` hinzufügen.
+   - **Wichtig:** Den Veröffentlichungsstatus auf **„In Produktion"** stellen („App veröffentlichen").
+     Im Status „Testing" laufen Refresh-Tokens nach 7 Tagen ab, und der Newsletter-Abruf würde nach einer Woche stillschweigend aufhören.
+     Für private Nutzung ist keine Google-Prüfung nötig; beim Login erscheint nur der Warnhinweis „Nicht verifiziert".
+3. **„Anmeldedaten" → „Anmeldedaten erstellen" → „OAuth-Client-ID"** → Typ **„Webanwendung"** →
+   bei **„Autorisierte Weiterleitungs-URIs"** eintragen: `https://developers.google.com/oauthplayground` → Erstellen.
+   Kopiere **Client-ID** und **Clientschlüssel**.
+
+**c) Refresh-Token holen (einmalig, mit dem OAuth Playground)**
+1. Öffne https://developers.google.com/oauthplayground/
+2. Zahnrad oben rechts → Haken bei **„Use your own OAuth credentials"** → Client-ID und Clientschlüssel einfügen → Schließen.
+3. Links bei **„Step 1"** ins Feld unten `https://www.googleapis.com/auth/gmail.readonly` eintippen → **„Authorize APIs"**.
+4. Mit dem Google-Konto anmelden, in das die Newsletter kommen. Kommt „Google hat diese App nicht überprüft":
+   **„Erweitert" → „Zu … (unsicher) wechseln"** → Zugriff erlauben.
+5. **„Step 2" → „Exchange authorization code for tokens"** → den Wert **Refresh token** kopieren.
+
+**d) Eintragen**
+- `.env` (lokal) und GitHub Secrets: `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`.
+- Sind alle drei gesetzt, liest der Lauf Newsletter. Im Log erscheint dann `mails=<Anzahl>`.
+  Bleibt `mails=0` und `fehler` steigt, stimmt meist das Token nicht (abgelaufen/widerrufen → Schritt c wiederholen).
+
+**e) Hinweis zum Datenschutz:** Der Text der gelabelten Mails wird an die Gemini-API geschickt, damit Angebots-Links herausgesucht werden.
+Labele deshalb nur echte Newsletter, keine privaten Mails. Im GitHub-Log erscheinen nie Mail-Inhalte, nur Zähler.
