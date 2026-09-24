@@ -22,6 +22,11 @@ CATEGORY_LABELS = {
     "uni_programm": "Uni-Programm", "projektfoerderung": "Projektförderung", "sonstiges": "Sonstiges",
 }
 FORMAT_LABELS = {"praesenz": "Präsenz", "online": "Online", "hybrid": "Hybrid"}
+TRAVEL_LABELS = {"ja": "Voll übernommen", "teilweise": "Teilweise", "nein": "Nicht übernommen", "unklar": "Unklar"}
+BENEFIT_LABELS = {
+    "geld": "Geld", "mentoring": "Mentoring", "netzwerk": "Netzwerk", "zertifikat": "Zertifikat",
+    "credits": "Credits", "hardware": "Hardware", "inkubator": "Inkubator", "preis": "Preis",
+}
 
 
 def _date_text(d: date | None) -> str:
@@ -34,11 +39,7 @@ def public_view(o: Opportunity) -> dict[str, Any]:
         fee = "Gebühr unklar"
     else:
         fee = "kostenlos" if o.fee_eur == 0 else f"{o.fee_eur:g} €"
-    funding = []
-    if o.fully_funded:
-        funding.append("voll finanziert")
-    if o.travel_covered in ("ja", "teilweise"):
-        funding.append("Reise: " + ("übernommen" if o.travel_covered == "ja" else "teilweise"))
+    funding = ["voll finanziert"] if o.fully_funded else []
     return {
         "title": o.title,
         "organizer": o.organizer,
@@ -53,8 +54,12 @@ def public_view(o: Opportunity) -> dict[str, Any]:
         "deadline_text": _date_text(o.deadline) or "unklar",
         "event_text": " – ".join(t for t in (_date_text(o.event_start), _date_text(o.event_end)) if t),
         "fee": fee,
+        "free": o.fee_eur == 0,
+        "travel": o.travel_covered,
+        "travel_label": TRAVEL_LABELS.get(o.travel_covered, "Unklar"),
         "funding": funding,
         "benefits": list(o.benefits),
+        "benefit_labels": [BENEFIT_LABELS.get(b, b) for b in o.benefits],
         "eligibility": o.eligibility,
     }
 
@@ -81,6 +86,7 @@ def build_site(entries: Iterable[Opportunity], today: date, out_dir: Path | None
         today_iso=today.isoformat(),
         categories=sorted({(i["category"], i["category_label"]) for i in items}, key=lambda c: c[1]),
         countries=sorted({i["country"] for i in items if i["country"]}),
+        benefit_options=sorted({(b, BENEFIT_LABELS.get(b, b)) for i in items for b in i["benefits"]}, key=lambda b: b[1]),
     )
     (out / "index.html").write_text(html, encoding="utf-8")
     (out / ".nojekyll").write_text("", encoding="utf-8")

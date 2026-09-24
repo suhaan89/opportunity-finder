@@ -22,38 +22,64 @@
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text);
          font: 16px/1.5 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-  .wrap { max-width: 1080px; margin: 0 auto; padding: 24px 16px 48px; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 24px 16px 48px; }
   header h1 { margin: 0; font-size: clamp(1.6rem, 4vw, 2.2rem); letter-spacing: -.02em; }
   header p { margin: 4px 0 0; color: var(--muted); }
-  .filters { display: grid; gap: 10px; margin: 20px 0 8px;
-             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
-  .filters input, .filters select {
+
+  .toolbar { margin: 20px 0 8px; display: grid; gap: 10px; }
+  .toolbar input[type=search], .toolbar select {
     width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line);
     background: var(--card); color: var(--text); font: inherit; }
-  .filters input { grid-column: 1 / -1; }
-  @media (min-width: 720px) { .filters input { grid-column: auto; grid-column-end: span 2; } }
-  .count { color: var(--muted); font-size: .9rem; margin: 6px 2px 14px; }
-  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px;
-          box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 8px; }
-  .card[hidden] { display: none; }
-  .card h2 { margin: 0; font-size: 1.05rem; line-height: 1.3; }
-  .card h2 a { color: var(--text); text-decoration: none; }
-  .card h2 a:hover { color: var(--accent); text-decoration: underline; }
-  .org { color: var(--muted); font-size: .88rem; }
-  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-  .chip { font-size: .75rem; padding: 2px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .selects { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  .cats { display: flex; flex-wrap: wrap; gap: 8px; }
+  .cats button { font: inherit; font-size: .88rem; padding: 6px 14px; border-radius: 999px; cursor: pointer;
+                 border: 1px solid var(--line); background: var(--card); color: var(--text); }
+  .cats button[aria-pressed=true] { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .checks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: .92rem; }
+  .checks label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  .meta { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: .9rem; margin: 6px 2px 10px; }
+  .meta button { font: inherit; font-size: .88rem; background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0; }
+  .meta button:hover { text-decoration: underline; }
+
+  .tablewrap { background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); font-size: .92rem; }
+  thead th { background: var(--card); color: var(--muted); font-size: .78rem; text-transform: uppercase;
+             letter-spacing: .04em; white-space: nowrap; border-bottom: 2px solid var(--line); }
+  thead th.sortable { cursor: pointer; user-select: none; }
+  thead th.sortable:hover { color: var(--text); }
+  thead th[aria-sort=ascending]::after { content: " \25B2"; font-size: .7em; }
+  thead th[aria-sort=descending]::after { content: " \25BC"; font-size: .7em; }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:hover { background: var(--accent-soft); }
+  tr[hidden] { display: none; }
+  td.title { min-width: 260px; }
+  td.title a { color: var(--text); font-weight: 600; text-decoration: none; }
+  td.title a:hover { color: var(--accent); text-decoration: underline; }
+  .org { color: var(--muted); font-size: .85rem; }
+  .elig { color: var(--muted); font-size: .82rem; margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical; overflow: hidden; }
+  td.small { font-size: .85rem; white-space: nowrap; }
+  td.wrapok { white-space: normal; min-width: 130px; }
+  .chip { display: inline-block; font-size: .75rem; padding: 2px 9px; border-radius: 999px; background: var(--accent-soft);
+          color: var(--accent); font-weight: 600; margin: 0 4px 4px 0; white-space: nowrap; }
   .chip.good { background: var(--good-soft); color: var(--good); }
-  dl { margin: 4px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-size: .9rem; }
-  dt { color: var(--muted); }
-  dd { margin: 0; }
-  .elig { font-size: .88rem; color: var(--muted); }
-  .cta { margin-top: auto; padding-top: 6px; }
-  .cta a { display: inline-block; padding: 8px 14px; border-radius: 10px; background: var(--accent); color: #fff;
-           text-decoration: none; font-weight: 600; font-size: .9rem; }
-  .cta a:hover { filter: brightness(1.1); }
+  .chip.plain { background: transparent; border: 1px solid var(--line); color: var(--muted); font-weight: 500; }
+  .travel-ja { color: var(--good); font-weight: 600; }
+  .travel-nein { color: var(--muted); }
+  .dl-soon { font-weight: 700; }
   .empty { text-align: center; color: var(--muted); padding: 40px 0; }
   footer { margin-top: 28px; color: var(--muted); font-size: .8rem; }
+
+  @media (max-width: 800px) {
+    thead { display: none; }
+    table, tbody, tr, td { display: block; width: 100%; }
+    tr { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+    tr[hidden] { display: none; }
+    td { border: 0; padding: 2px 0; white-space: normal !important; min-width: 0 !important; }
+    td[data-label]::before { content: attr(data-label) ": "; color: var(--muted); }
+    td.title { margin-bottom: 4px; }
+  }
 </style>
 </head>
 <body>
@@ -63,54 +89,92 @@
     <p>Events, Stipendien, Wettbewerbe und Förderungen · Stand {{ stand }}</p>
   </header>
 
-  <div class="filters" role="search">
-    <input id="q" type="search" placeholder="Suchen …" aria-label="Suchen">
-    <select id="f-cat" aria-label="Kategorie">
-      <option value="">Alle Kategorien</option>
-      {% for key, label in categories %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
-    </select>
-    <select id="f-country" aria-label="Land">
-      <option value="">Alle Länder</option>
-      {% for c in countries %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
-    </select>
-    <select id="f-format" aria-label="Format">
-      <option value="">Online &amp; Präsenz</option>
-      <option value="praesenz">Präsenz</option>
-      <option value="online">Online</option>
-      <option value="hybrid">Hybrid</option>
-    </select>
-    <select id="f-deadline" aria-label="Deadline">
-      <option value="">Alle Deadlines</option>
-      <option value="30">Nächste 30 Tage</option>
-      <option value="90">Nächste 90 Tage</option>
-      <option value="none">Ohne Datum</option>
-    </select>
+  <div class="toolbar" role="search">
+    <input id="q" type="search" placeholder="Suchen (Titel, Veranstalter, Ort, Voraussetzungen) …" aria-label="Suchen">
+    <div class="cats" id="cats" role="group" aria-label="Kategorie">
+      {% for key, label in categories %}<button type="button" data-cat="{{ key }}" aria-pressed="false">{{ label }}</button>{% endfor %}
+    </div>
+    <div class="selects">
+      <select id="f-country" aria-label="Land">
+        <option value="">Alle Länder</option>
+        {% for c in countries %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+      </select>
+      <select id="f-format" aria-label="Format">
+        <option value="">Online &amp; Präsenz</option>
+        <option value="praesenz">Präsenz</option>
+        <option value="online">Online</option>
+        <option value="hybrid">Hybrid</option>
+      </select>
+      <select id="f-travel" aria-label="Reisekosten">
+        <option value="">Reisekosten: egal</option>
+        <option value="ja">Voll übernommen</option>
+        <option value="jateil">Voll oder teilweise</option>
+        <option value="nein">Nicht übernommen</option>
+        <option value="unklar">Unklar</option>
+      </select>
+      <select id="f-benefit" aria-label="Vorteil">
+        <option value="">Alle Vorteile</option>
+        {% for key, label in benefit_options %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+      </select>
+      <select id="f-deadline" aria-label="Deadline">
+        <option value="">Alle Deadlines</option>
+        <option value="30">Nächste 30 Tage</option>
+        <option value="90">Nächste 90 Tage</option>
+        <option value="none">Ohne Datum</option>
+      </select>
+    </div>
+    <div class="checks">
+      <label><input type="checkbox" id="c-funded"> Nur voll finanziert</label>
+      <label><input type="checkbox" id="c-free"> Nur kostenlos</label>
+    </div>
   </div>
-  <div class="count" id="count" aria-live="polite"></div>
+  <div class="meta"><span id="count" aria-live="polite"></span><button type="button" id="reset">Filter zurücksetzen</button></div>
 
-  <main class="grid" id="grid">
-  {% for i in items %}
-    <article class="card" data-cat="{{ i.category }}" data-country="{{ i.country }}" data-format="{{ i.format }}"
-             data-deadline="{{ i.deadline_iso }}" data-text="{{ (i.title ~ ' ' ~ i.organizer ~ ' ' ~ i.city ~ ' ' ~ i.country ~ ' ' ~ i.eligibility)|lower }}">
-      <div class="chips">
-        <span class="chip">{{ i.category_label }}</span>
-        <span class="chip">{{ i.format_label }}</span>
-        {% for f in i.funding %}<span class="chip good">{{ f }}</span>{% endfor %}
-      </div>
-      <h2><a href="{{ i.url }}" rel="noopener noreferrer" target="_blank">{{ i.title }}</a></h2>
-      <div class="org">{{ i.organizer }}</div>
-      <dl>
-        <dt>Deadline</dt><dd>{{ i.deadline_text }}</dd>
-        {% if i.event_text %}<dt>Termin</dt><dd>{{ i.event_text }}</dd>{% endif %}
-        {% if i.city or i.country %}<dt>Ort</dt><dd>{{ [i.city, i.country]|select|join(', ') }}</dd>{% endif %}
-        <dt>Kosten</dt><dd>{{ i.fee }}</dd>
-        {% if i.benefits %}<dt>Vorteile</dt><dd>{{ i.benefits|join(', ') }}</dd>{% endif %}
-      </dl>
-      {% if i.eligibility %}<div class="elig">{{ i.eligibility }}</div>{% endif %}
-      <div class="cta"><a href="{{ i.url }}" rel="noopener noreferrer" target="_blank">Zur Seite</a></div>
-    </article>
-  {% endfor %}
-  </main>
+  <div class="tablewrap">
+  <table id="tbl">
+    <thead>
+      <tr>
+        <th class="sortable" data-col="title">Angebot</th>
+        <th class="sortable" data-col="cat">Kategorie</th>
+        <th class="sortable" data-col="deadline">Deadline</th>
+        <th>Termin</th>
+        <th class="sortable" data-col="place">Ort / Format</th>
+        <th class="sortable" data-col="fee">Kosten</th>
+        <th class="sortable" data-col="travel">Reisekosten</th>
+        <th>Förderung &amp; Vorteile</th>
+      </tr>
+    </thead>
+    <tbody id="rows">
+    {% for i in items %}
+      <tr data-cat="{{ i.category }}" data-country="{{ i.country }}" data-format="{{ i.format }}"
+          data-deadline="{{ i.deadline_iso }}" data-travel="{{ i.travel }}" data-funded="{{ '1' if i.funding else '' }}"
+          data-free="{{ '1' if i.free else '' }}" data-benefits="{{ i.benefits|join(' ') }}"
+          data-text="{{ (i.title ~ ' ' ~ i.organizer ~ ' ' ~ i.city ~ ' ' ~ i.country ~ ' ' ~ i.eligibility)|lower }}"
+          data-s-title="{{ i.title|lower }}" data-s-cat="{{ i.category_label|lower }}"
+          data-s-deadline="{{ i.deadline_iso or '9999-12-31' }}"
+          data-s-place="{{ ([i.country, i.city]|select|join(' ')) or 'zzz' }}"
+          data-s-fee="{{ '0' if i.free else '1' }}"
+          data-s-travel="{{ {'ja': 0, 'teilweise': 1, 'unklar': 2, 'nein': 3}.get(i.travel, 2) }}">
+        <td class="title">
+          <a href="{{ i.url }}" rel="noopener noreferrer" target="_blank">{{ i.title }}</a>
+          <div class="org">{{ i.organizer }}</div>
+          {% if i.eligibility %}<div class="elig" title="{{ i.eligibility }}">{{ i.eligibility }}</div>{% endif %}
+        </td>
+        <td data-label="Kategorie" class="small"><span class="chip">{{ i.category_label }}</span></td>
+        <td data-label="Deadline" class="small" data-dl>{{ i.deadline_text }}</td>
+        <td data-label="Termin" class="small">{{ i.event_text or '–' }}</td>
+        <td data-label="Ort" class="small wrapok">{{ [i.city, i.country]|select|join(', ') or '–' }}<br><span class="org">{{ i.format_label }}</span></td>
+        <td data-label="Kosten" class="small">{{ i.fee }}</td>
+        <td data-label="Reisekosten" class="small travel-{{ i.travel }}">{{ i.travel_label }}</td>
+        <td data-label="Förderung" class="wrapok">
+          {% for f in i.funding %}<span class="chip good">{{ f }}</span>{% endfor %}
+          {% for b in i.benefit_labels %}<span class="chip plain">{{ b }}</span>{% endfor %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
   <div class="empty" id="empty" hidden>Keine Treffer für diese Filter.</div>
 
   <footer>Automatisch erstellt. Angaben ohne Gewähr, bitte immer auf der Original-Seite prüfen.</footer>
@@ -118,33 +182,78 @@
 
 <script>
 (function () {
-  var cards = Array.prototype.slice.call(document.querySelectorAll('.card'));
-  var q = document.getElementById('q'), cat = document.getElementById('f-cat'),
-      country = document.getElementById('f-country'), fmt = document.getElementById('f-format'),
-      dl = document.getElementById('f-deadline'), count = document.getElementById('count'),
-      empty = document.getElementById('empty');
+  var tbody = document.getElementById('rows');
+  var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+  var q = document.getElementById('q'), country = document.getElementById('f-country'),
+      fmt = document.getElementById('f-format'), travel = document.getElementById('f-travel'),
+      benefit = document.getElementById('f-benefit'), dl = document.getElementById('f-deadline'),
+      funded = document.getElementById('c-funded'), free = document.getElementById('c-free'),
+      count = document.getElementById('count'), empty = document.getElementById('empty'),
+      cats = Array.prototype.slice.call(document.querySelectorAll('#cats button'));
 
   function dayDiff(iso) {
     var d = new Date(iso + 'T00:00:00'), t = new Date(); t.setHours(0, 0, 0, 0);
     return Math.round((d - t) / 86400000);
   }
+  function activeCats() {
+    return cats.filter(function (b) { return b.getAttribute('aria-pressed') === 'true'; })
+               .map(function (b) { return b.dataset.cat; });
+  }
   function apply() {
-    var text = q.value.trim().toLowerCase(), shown = 0;
-    cards.forEach(function (c) {
-      var ok = true, d = c.dataset.deadline;
-      if (text && c.dataset.text.indexOf(text) === -1) ok = false;
-      if (cat.value && c.dataset.cat !== cat.value) ok = false;
-      if (country.value && c.dataset.country !== country.value) ok = false;
-      if (fmt.value && c.dataset.format !== fmt.value) ok = false;
+    var text = q.value.trim().toLowerCase(), sel = activeCats(), shown = 0;
+    rows.forEach(function (r) {
+      var ok = true, d = r.dataset.deadline, t = r.dataset.travel;
+      if (text && r.dataset.text.indexOf(text) === -1) ok = false;
+      if (sel.length && sel.indexOf(r.dataset.cat) === -1) ok = false;
+      if (country.value && r.dataset.country !== country.value) ok = false;
+      if (fmt.value && r.dataset.format !== fmt.value) ok = false;
+      if (travel.value === 'jateil' ? (t !== 'ja' && t !== 'teilweise') : (travel.value && t !== travel.value)) ok = false;
+      if (benefit.value && (' ' + r.dataset.benefits + ' ').indexOf(' ' + benefit.value + ' ') === -1) ok = false;
+      if (funded.checked && !r.dataset.funded) ok = false;
+      if (free.checked && !r.dataset.free) ok = false;
       if (dl.value === 'none' && d) ok = false;
-      if ((dl.value === '30' || dl.value === '90') && (!d || dayDiff(d) > parseInt(dl.value, 10))) ok = false;
-      c.hidden = !ok;
+      if ((dl.value === '30' || dl.value === '90') && (!d || dayDiff(d) < 0 || dayDiff(d) > parseInt(dl.value, 10))) ok = false;
+      r.hidden = !ok;
       if (ok) shown++;
     });
-    count.textContent = shown + ' von ' + cards.length + ' Angeboten';
+    count.textContent = shown + ' von ' + rows.length + ' Angeboten';
     empty.hidden = shown !== 0;
   }
-  [q, cat, country, fmt, dl].forEach(function (el) { el.addEventListener('input', apply); });
+  cats.forEach(function (b) {
+    b.addEventListener('click', function () {
+      b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
+      apply();
+    });
+  });
+  [q, country, fmt, travel, benefit, dl, funded, free].forEach(function (el) { el.addEventListener('input', apply); });
+  document.getElementById('reset').addEventListener('click', function () {
+    q.value = ''; country.value = fmt.value = travel.value = benefit.value = dl.value = '';
+    funded.checked = free.checked = false;
+    cats.forEach(function (b) { b.setAttribute('aria-pressed', 'false'); });
+    apply();
+  });
+
+  // Sortieren per Klick auf die Spaltenüberschrift (nochmal klicken = umdrehen)
+  var heads = Array.prototype.slice.call(document.querySelectorAll('th.sortable'));
+  heads.forEach(function (th) {
+    th.addEventListener('click', function () {
+      var key = 's' + th.dataset.col.charAt(0).toUpperCase() + th.dataset.col.slice(1);
+      var dir = th.getAttribute('aria-sort') === 'ascending' ? -1 : 1;
+      heads.forEach(function (h) { h.removeAttribute('aria-sort'); });
+      th.setAttribute('aria-sort', dir === 1 ? 'ascending' : 'descending');
+      rows.sort(function (a, b) {
+        var x = a.dataset[key], y = b.dataset[key];
+        return (x < y ? -1 : x > y ? 1 : 0) * dir;
+      });
+      rows.forEach(function (r) { tbody.appendChild(r); });
+    });
+  });
+
+  // Bald ablaufende Deadlines (7 Tage) fett markieren
+  rows.forEach(function (r) {
+    var d = r.dataset.deadline;
+    if (d && dayDiff(d) >= 0 && dayDiff(d) <= 7) r.querySelector('[data-dl]').classList.add('dl-soon');
+  });
   apply();
 })();
 </script>

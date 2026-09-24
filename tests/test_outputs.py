@@ -88,7 +88,8 @@ def test_public_view_hat_keine_privaten_felder():
         assert privat not in text
     assert set(view) == {
         "title", "organizer", "url", "category", "category_label", "format", "format_label", "city",
-        "country", "deadline_iso", "deadline_text", "event_text", "fee", "funding", "benefits", "eligibility",
+        "country", "deadline_iso", "deadline_text", "event_text", "fee", "free", "travel", "travel_label",
+        "funding", "benefits", "benefit_labels", "eligibility",
     }
 
 
@@ -106,6 +107,7 @@ def test_seite_wird_gebaut_ohne_private_daten(tmp_path):
     for privat in ("GEHEIMER GRUND", "MEINE NOTIZ", "Reisekosten unklar", "91/100"):
         assert privat not in html
     assert "Schweiz" in html and "voll finanziert" in html
+    assert "<table" in html and 'id="f-travel"' in html            # Tabellenansicht mit Reise-Filter
     assert (tmp_path / ".nojekyll").exists()
 
 
@@ -121,3 +123,11 @@ def test_seite_maskiert_html():
 def test_sortierung_nach_deadline_unklar_zuletzt():
     liste = select_public([opp("z"), opp("b", deadline=date(2026, 12, 5)), opp("a", deadline=date(2026, 11, 1))])
     assert [o.id for o in liste] == ["a", "b", "z"]
+
+
+def test_reise_und_kosten_fuer_tabelle():
+    view = public_view(opp("a", travel_covered="ja", fee_eur=0, benefits=["geld", "mentoring"]))
+    assert view["travel"] == "ja" and view["travel_label"] == "Voll übernommen" and view["free"] is True
+    assert view["benefit_labels"] == ["Geld", "Mentoring"]
+    unklar = public_view(opp("b"))
+    assert unklar["travel_label"] == "Unklar" and unklar["free"] is False
