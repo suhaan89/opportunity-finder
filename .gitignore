@@ -13,3 +13,4 @@ __pycache__/
 # Sonstiges
 .DS_Store
 out/
+public_site/

@@ -21,11 +21,14 @@ from .dedupe import dedupe_batch
 from .extract import extract_opportunity
 from .filters import add_warnings, apply_post_score_filters, apply_pre_score_filters
 from .gemini import Budget, GeminiClient
+from .ics import build_ics, publish_gist, write_local
 from .mailer import MailContent, build_mail_content, render_email, send_email
 from .mocks import MockFetcher, MockGemini, build_fixtures
 from .models import Opportunity
 from .profile import load_profile
+from .reminders import deadline_reminders
 from .scoring import score_opportunity
+from .site import build_site
 from .sheets import LocalStore, Store, Tables, add_new, archive_expired, open_store, touch_seen
 from .util import make_id, safe_error, today_berlin
 from .verify import Fetcher
@@ -222,19 +225,49 @@ def run_pipeline(svc: Services) -> RunResult:
 
 
 def run_outputs(svc: Services, result: RunResult) -> dict[str, str]:
-    """Ausgaben. Jede Ausgabe ist einzeln abgesichert: ein Fehler stoppt die anderen nicht."""
+    """Ausgaben: E-Mail, öffentliche Seite, Kalender-Feed.
+
+    Jede Ausgabe ist einzeln abgesichert: ein Fehler in einer stoppt die anderen nicht.
+    Im Log landet nur ein kurzer Status pro Ausgabe.
+    """
     status: dict[str, str] = {}
-    min_score = svc.settings.get("mail", {}).get("min_score", 70)
-    content: MailContent = build_mail_content(result.new_opps, [], min_score)
-    if content.is_empty():
-        status["mail"] = "nichts zu senden"
-    else:
-        try:
+    entries = result.tables.aktiv + result.tables.projekte
+    mail_cfg = svc.settings.get("mail", {})
+
+    # E-Mail: neue Top-Matches + Deadline-Reminder (nur senden, wenn es etwas gibt)
+    try:
+        reminders = deadline_reminders(entries, svc.today, mail_cfg.get("reminder_days", [7, 2]))
+        content: MailContent = build_mail_content(result.new_opps, reminders, mail_cfg.get("min_score", 70))
+        if content.is_empty():
+            status["mail"] = "nichts zu senden"
+        else:
             subject, html = render_email(content, svc.today)
             status["mail"] = "gesendet" if send_email(subject, html) else "lokal gespeichert (out/mail.html)"
-        except Exception as exc:  # noqa: BLE001
-            print(safe_error("mail", exc))
-            status["mail"] = "FEHLER"
+    except Exception as exc:  # noqa: BLE001
+        print(safe_error("mail", exc))
+        status["mail"] = "FEHLER"
+
+    # Öffentliche Seite (GitHub Pages): Ordner public_site/, wird vom Workflow veröffentlicht
+    try:
+        build_site(entries, svc.today)
+        status["seite"] = "erstellt (public_site/)"
+    except Exception as exc:  # noqa: BLE001
+        print(safe_error("seite", exc))
+        status["seite"] = "FEHLER"
+
+    # Kalender-Feed: in den geheimen Gist hochladen, sonst lokal speichern
+    try:
+        ics = build_ics(entries)
+        token, gist_id = os.environ.get("GIST_TOKEN", "").strip(), os.environ.get("GIST_ID", "").strip()
+        if token and gist_id and not svc.is_mock:
+            publish_gist(ics, token, gist_id)
+            status["kalender"] = "aktualisiert"
+        else:
+            write_local(ics)
+            status["kalender"] = "lokal gespeichert (out/opportunities.ics)"
+    except Exception as exc:  # noqa: BLE001
+        print(safe_error("kalender", exc))
+        status["kalender"] = "FEHLER"
     return status
 
 

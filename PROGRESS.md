@@ -26,11 +26,15 @@ Eine neue Session muss allein mit dieser Datei + `SPEC.md` + `SETUP_TODO.md` wei
   - 1.5 Gemini-Wrapper mit Budget (`gemini.py`), Collect, Verify, Extract
   - 1.6 Speicher (`sheets.py`, Google Sheets + lokaler Ersatz) · 1.7 Mailer (`mailer.py`)
   - 1.8 `main.py`, `mocks.py`, Workflows `daily.yml` + `tests.yml`
-- [ ] Phase 2: Ausgaben (Deadline-Reminder, .ics-Feed, GitHub-Pages-Seite, `pages.yml`)
+- [x] **Phase 2: Ausgaben** – Code fertig und getestet. Echtbetrieb wartet auf `SETUP_TODO.md` Schritte 6–7.
+  - 2.1 `reminders.py` (7/2 Tage vor Deadline, nur Status interessant/in_vorbereitung), `ics.py` (Feed + Upload in geheimen Gist),
+    `site.py` + `templates/site.html.j2` (statische Seite mit Filtern)
+  - 2.2 Einbindung in `main.py` (`run_outputs`: Mail inkl. Reminder, Seite nach `public_site/`, Kalender), `pages.yml`,
+    `daily.yml` lädt nur `public_site` als Artefakt hoch
 - [ ] Phase 3: Mehr Quellen (Quellenseiten aus `sources.yaml`, Gmail-Newsletter)
 
 ## Als Nächstes
-Phase 2: `reminders.py`, `ics.py` (+ Gist-Upload), `site.py` + `templates/site.html.j2`, `pages.yml`, in `main.py` einhängen.
+Phase 3: `collect.py` um Quellenseiten erweitern (Gemini liest Listenseiten), `gmail_reader.py` (Gmail-API nur lesen, nur Label), in `main.gather_candidates` einhängen.
 
 ## Phase 1 in einfachen Worten (was wurde gebaut?)
 Das Programm ist wie ein Fließband, das jeden Tag läuft:
@@ -46,6 +50,15 @@ Das Programm ist wie ein Fließband, das jeden Tag läuft:
 Ohne Zugangsdaten läuft alles mit erfundenen Beispieldaten (`--mock`), damit man das Zusammenspiel testen kann.
 Im öffentlichen Log stehen nur Zahlen (z. B. „kandidaten=8, gefiltert=4"), nie Inhalte.
 
+## Phase 2 in einfachen Worten (was wurde gebaut?)
+- **Deadline-Reminder:** Setzt du im Sheet den Status auf „interessant" oder „in_vorbereitung", steht der Eintrag genau
+  7 und 2 Tage vor der Deadline in der Tages-Mail (Abschnitt „Deadlines bald"). Auch ohne neue Treffer kommt dann eine Mail.
+- **Kalender-Feed (.ics):** Eine Datei mit Deadlines und Eventterminen deiner verfolgten Einträge. Sie liegt in einem geheimen Gist;
+  Google Kalender abonniert die Adresse. Deadlines haben eine Erinnerung einen Tag vorher.
+- **Öffentliche Seite:** Eine einzelne HTML-Seite (hell/dunkel, handytauglich) mit Suche und Filtern (Kategorie, Land, Format, Deadline).
+  Eine feste Positivliste (`public_view`) bestimmt, welche Felder erscheinen; Score, Status, Notizen und Profil kommen nie darauf.
+  Der Workflow „Pages" veröffentlicht sie nach jedem erfolgreichen Tageslauf.
+
 ## Entscheidungen / Abweichungen von der SPEC (bitte kurz prüfen)
 - `SPEC.md` im Repo enthält statt deines Profils ein **fiktives** Beispiel (Repo ist öffentlich).
 - Profil-YAML aus der SPEC war ungültig (`bedarf:` falsch eingerückt) → jetzt `projekte_bedarf:` (Profil, Beispiel, SPEC).
@@ -54,6 +67,8 @@ Im öffentlichen Log stehen nur Zahlen (z. B. „kandidaten=8, gefiltert=4"), ni
   bzw. „Duplikat"), damit sie nicht jeden Tag erneut Abrufe/Gemini-Aufrufe kosten.
 - Zusatzfelder im Sheet: `subject` (Fach bei Wettbewerben, für Filter 9) und `regional` (Umkreis-Einschätzung von Gemini, Filter 11).
 - Das Sheet wird pro Lauf komplett neu geschrieben: Änderungen, die du *während* des Laufs (Minuten um 05:00 UTC) machst, können verloren gehen.
+- Die öffentliche Seite hat `noindex` (nicht in Suchmaschinen listen) und zeigt auch Einträge aus „Projekte"; `ignoriert` wird ausgeblendet.
+- `pages.yml` läuft per `workflow_run` nach „Daily" und holt das Artefakt `site` (nur die öffentliche Seite; Artefakte öffentlicher Repos sind für alle sichtbar).
 - Extraktion + Bewertung kosten je 1 Gemini-Aufruf pro Eintrag; Extraktion nutzt max. die Hälfte des Restbudgets.
 
 ## Offene Probleme
