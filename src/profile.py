@@ -27,7 +27,7 @@ def load_profile() -> dict[str, Any]:
 
 
 def _to_date(value: Any) -> date | None:
-    """YAML macht aus 2009-09-20 schon ein date; Strings wandeln wir um."""
+    """YAML macht aus 2010-03-15 schon ein date; Strings wandeln wir um."""
     if isinstance(value, date):
         return value
     if isinstance(value, str):

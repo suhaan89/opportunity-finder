@@ -299,7 +299,7 @@ Kuratierte Quellenseiten aus `sources.yaml`, Gmail-Newsletter lesen (Gmail API, 
 Feedback-Lernen aus Sheet-Status, jährliche Wiederholungen vormerken, Pay-to-play-Erkennung, optional Bewerbungs-Checkliste pro Eintrag.
 
 **Phase 5: Für andere nutzbar**
-README mit Setup-Anleitung, `profile.example.yaml`, Fork-fähig (z. B. für die KI-AG).
+README mit Setup-Anleitung, `profile.example.yaml`, Fork-fähig (z. B. für eine Schul-AG).
 
 ---
 
