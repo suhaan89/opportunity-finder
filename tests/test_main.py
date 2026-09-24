@@ -4,7 +4,7 @@ from datetime import date
 from src.config import load_settings, load_sources
 from src.gemini import Budget
 from src.main import Services, load_dotenv, run_outputs, run_pipeline
-from src.mocks import MockFetcher, MockGemini, build_fixtures
+from src.mocks import MockFetcher, MockGemini, MockMailReader, build_fixtures, mock_sources_config
 from src.sheets import LocalStore
 
 HEUTE = date(2026, 9, 24)
@@ -31,7 +31,8 @@ def services(tmp_path):
     budget = Budget(settings["gemini"]["max_calls_per_run"])
     fx = build_fixtures(HEUTE)
     return Services(MockGemini(fx, budget), MockFetcher(fx), LocalStore(tmp_path / "store.json"),
-                    budget, settings, load_sources(), PROFIL, HEUTE, is_mock=True)
+                    budget, settings, {**load_sources(), "pages": mock_sources_config()}, PROFIL, HEUTE,
+                    is_mock=True, mail_reader=MockMailReader(fx))
 
 
 def test_kompletter_lauf(tmp_path, monkeypatch):
@@ -41,13 +42,18 @@ def test_kompletter_lauf(tmp_path, monkeypatch):
     svc = services(tmp_path)
     result = run_pipeline(svc)
     c = result.counts
-    assert c["kandidaten"] == 8 and c["erreichbar"] == 7 and c["extrahiert"] == 7
+    # 8 aus der Suche (7 Seiten + 1 toter Link) + 1 aus der Quellenseite + 1 aus dem Newsletter
+    assert c["quellen"] == 1 and c["mails"] == 1
+    assert c["kandidaten"] == 10 and c["erreichbar"] == 9 and c["extrahiert"] == 9
     assert c["duplikate"] == 1
     assert c["gefiltert"] == 4          # Fach, abgelaufen, zu teuer, online mit zu wenig Prestige
-    assert c["bewertet"] == 3 and c["neu_gespeichert"] == 2
+    assert c["bewertet"] == 5 and c["neu_gespeichert"] == 4
     assert c["gemini_aufrufe"] <= 40
     titles = {o.title for o in result.new_opps}
-    assert titles == {"Sommerakademie Künstliche Intelligenz", "Cloud-Credits für Schülerprojekte"}
+    assert titles == {
+        "Sommerakademie Künstliche Intelligenz", "Cloud-Credits für Schülerprojekte",
+        "Stipendium für junge Programmierer", "Nachwuchs-Forum Digitalisierung",
+    }
     assert [o.title for o in result.tables.projekte] == ["Cloud-Credits für Schülerprojekte"]
     assert len(result.tables.archiv) == 5 and all(o.status == "ignoriert" for o in result.tables.archiv)
 
