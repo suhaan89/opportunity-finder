@@ -16,13 +16,18 @@ dedupe:
 
 scoring:
   weights:                       # Summe = 1.0
-    interest_fit: 0.35
-    funding: 0.20
+    interest_fit: 0.30
+    funding: 0.25
     prestige: 0.20
     career: 0.15
     network: 0.05
     feasibility: 0.05
-  fully_funded_bonus: 10         # Bonus für voll finanziert + international
+  fully_funded_bonus: 15         # Bonus für voll finanziert + international
+  extra_interests:               # zusätzlich zu den Interessen im Profil (Punkte wie dort)
+    reisen_und_neue_orte_kostenlos: 40        # Workshops, Austausche, Camps an anderen Orten, Kosten übernommen
+    jugendaustausch_europa_workshops: 25      # Erasmus+, SALTO, Jugendbegegnungen, Trainings (jedes Thema)
+    journalismus_medien_kreatives: 10
+    persoenliche_entwicklung_leadership: 15
   online_min_prestige: 85        # Online-Ausnahme
   regional_min_prestige: 80      # Regional-Ausnahme
   top_provider_prestige_floor: 90
@@ -42,7 +47,7 @@ scoring:
     - Fraunhofer
 
 mail:
-  min_score: 70                  # E-Mail-Schwelle
+  min_score: 50                  # E-Mail-Schwelle (alles Gespeicherte steht auf der Seite)
   reminder_days: [7, 2]          # Deadline-Reminder: so viele Tage vorher
 
 gmail:

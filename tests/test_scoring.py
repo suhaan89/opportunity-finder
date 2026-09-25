@@ -114,3 +114,13 @@ def test_score_opportunity_ok_und_fehler():
     assert not score_opportunity(o2, PROFIL, SETTINGS, FakeGemini(kaputt))
     assert o2.score is None
     assert not score_opportunity(opp(), PROFIL, SETTINGS, FakeGemini(None))
+
+
+def test_extra_interessen_aus_settings():
+    from src.scoring import with_extra_interests
+    profil = {"interessen_punkte": {"ki_forschung": 60}}
+    s = {"scoring": {"extra_interests": {"reisen": 40, "ki_forschung": 5}}}
+    p = with_extra_interests(profil, s)
+    assert p["interessen_punkte"] == {"reisen": 40, "ki_forschung": 60}
+    assert profil["interessen_punkte"] == {"ki_forschung": 60}      # Original unverändert
+    assert with_extra_interests(profil, {}) is profil

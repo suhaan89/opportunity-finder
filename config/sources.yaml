@@ -37,6 +37,15 @@ queries:
   - Gründerprogramm Schüler Startup Förderung
   - Mentoring Programm Schüler Bewerbung kostenlos
   - cloud credits student project free program
+  # Reisen, Camps, Workshops zu allen Themen (Kosten übernommen)
+  - Jugendworkshop Journalismus Reisekosten übernommen Unterkunft
+  - youth media journalism workshop Europe all costs covered
+  - Jugendcamp international kostenlos Reise Unterkunft Verpflegung
+  - international youth camp free accommodation travel reimbursed 2026
+  - Studienreise Schüler Stipendium kostenlos
+  - youth seminar abroad call for participants accommodation covered
+  - Europäisches Solidaritätskorps Jugendliche Projekt Ausland
+  - Theater Kunst Film Workshop Jugendliche Europa kostenlos Teilnahme
 
 # b) Kuratierte Quellenseiten (Phase 3): werden direkt geladen und ausgewertet.
 # enabled: false oder leere url = wird übersprungen. URLs bitte gelegentlich prüfen!
