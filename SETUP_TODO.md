@@ -29,6 +29,18 @@ Windows-Hinweis: Die Befehle unten sind für die Eingabeaufforderung/PowerShell 
 5. Free-Tier-Hinweis: Die Suche mit Google-Grounding hat im Gratis-Tarif ein Tageslimit. Kommt es zu Fehlern
    (Zähler `fehler` im Log), verringere `gemini.searches_per_run` in `config/settings.yaml`.
 
+## 1b. Brave-Suchschlüssel (Websuche, Phase 1)
+
+Die Google-Suche von Gemini ist im Gratis-Tarif gesperrt (Fehler 429). Deshalb sucht das Programm stattdessen mit Brave.
+Gemini liest danach nur noch die gefundenen Seiten.
+
+1. Öffne https://brave.com/search/api/ → **„Get started"** → Konto anlegen und den **Gratis-Tarif** („Free" / „Search") wählen.
+   Ob Brave dafür eine Karte zur Verifizierung verlangt, entscheidet Brave. Prüfe, dass der Tarif **0 €** kostet, bevor du bestätigst.
+2. Im Dashboard unter **„API Keys"** einen Schlüssel erzeugen und kopieren.
+3. Trage ihn in `.env` ein (`BRAVE_API_KEY=dein_schluessel`) und lege in GitHub das Secret `BRAVE_API_KEY` an.
+4. Test: `.venv\Scripts\python -m src.check --live` (Zeile „Brave-Websuche").
+5. Ohne `BRAVE_API_KEY` nutzt das Programm weiter die Google-Suche von Gemini (im Gratis-Tarif gesperrt).
+
 ## 2. Google Sheet + Service-Account (Phase 1)
 
 **a) Google Cloud Projekt und Service-Account**
@@ -78,6 +90,7 @@ Windows-Hinweis: Die Befehle unten sind für die Eingabeaufforderung/PowerShell 
    | Name | Wert |
    |---|---|
    | `GEMINI_API_KEY` | Schlüssel aus Schritt 1 |
+   | `BRAVE_API_KEY` | Schlüssel aus Schritt 1b |
    | `PROFILE_YAML` | **kompletter Inhalt** deiner lokalen `profile.yaml` (mehrzeilig ist ok) |
    | `GOOGLE_SERVICE_ACCOUNT_JSON` | **kompletter Inhalt** von `service_account.json` |
    | `SHEET_ID` | Tabellen-ID aus Schritt 2 |

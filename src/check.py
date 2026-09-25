@@ -20,6 +20,7 @@ from .main import load_dotenv
 # Gruppe -> Namen der Werte (aus SPEC Abschnitt 11)
 GROUPS: dict[str, list[str]] = {
     "Gemini (Phase 1)": ["GEMINI_API_KEY"],
+    "Websuche Brave (Phase 1)": ["BRAVE_API_KEY"],
     "Google Sheet (Phase 1)": ["GOOGLE_SERVICE_ACCOUNT_JSON", "SHEET_ID"],
     "E-Mail (Phase 1)": ["SMTP_USER", "SMTP_APP_PASSWORD", "MAIL_TO"],
     "Kalender-Gist (Phase 2)": ["GIST_TOKEN", "GIST_ID"],
@@ -62,6 +63,13 @@ def _live_gemini() -> None:
     client.models.generate_content(model=load_settings()["gemini"]["model"], contents="Antworte nur mit: ok")
 
 
+def _live_brave() -> None:
+    from .websearch import BraveSearch
+
+    if not BraveSearch(os.environ["BRAVE_API_KEY"].strip())("Stipendium Schüler"):
+        raise RuntimeError("keine Treffer")
+
+
 def _live_sheet() -> None:
     from .sheets import SheetStore, open_store
 
@@ -88,6 +96,7 @@ def _live_gmail() -> None:
 
 LIVE_TESTS: list[tuple[str, list[str], Callable[[], None]]] = [
     ("Gemini-Key und Modellname", ["GEMINI_API_KEY"], _live_gemini),
+    ("Brave-Websuche", ["BRAVE_API_KEY"], _live_brave),
     ("Google Sheet erreichbar", ["GOOGLE_SERVICE_ACCOUNT_JSON", "SHEET_ID"], _live_sheet),
     ("Gmail-SMTP-Login", ["SMTP_USER", "SMTP_APP_PASSWORD"], _live_smtp),
     ("Gmail-Lesezugriff (Token)", ["GMAIL_CLIENT_ID", "GMAIL_CLIENT_SECRET", "GMAIL_REFRESH_TOKEN"], _live_gmail),

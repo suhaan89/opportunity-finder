@@ -103,7 +103,9 @@ class GeminiClient:
         budget: Budget,
         seconds_between_calls: float = 5,
         client: Any = None,
+        web_search: Any = None,
     ) -> None:
+        self.web_search = web_search  # z. B. BraveSearch; ersetzt dann die Google-Suche von Gemini
         self.model = model
         self.budget = budget
         self.pause = seconds_between_calls
@@ -138,7 +140,9 @@ class GeminiClient:
 
     # ----- öffentliche Funktionen -----
     def search(self, query: str, today: str) -> SearchResult:
-        """Websuche mit Google-Grounding. Liefert Fundstücke (Titel + URL), ungeprüft."""
+        """Websuche (Brave, falls konfiguriert, sonst Google-Grounding). Fundstücke (Titel + URL), ungeprüft."""
+        if self.web_search is not None:
+            return SearchResult(text="", hits=self.web_search(query, today))
         from google.genai import types
 
         prompt = (
