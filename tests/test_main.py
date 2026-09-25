@@ -115,3 +115,46 @@ def test_reminder_loest_mail_aus(tmp_path, monkeypatch):
     out = run_outputs(svc, result)
     assert out["mail"].startswith("lokal gespeichert")
     assert "In 7 Tagen" in (tmp_path / "out" / "mail.html").read_text(encoding="utf-8")
+
+
+def test_uebersichtsseite_wird_nach_einzelangeboten_durchsucht(tmp_path):
+    """Eine Liste (z. B. SALTO-Kalender) ist kein Angebot, ihre verlinkten Einzelseiten aber schon."""
+    from src.gemini import SearchHit, SearchResult
+    from src.verify import Page
+
+    liste = Page("https://liste.example/kalender", "Kalender", "Übersicht vieler Trainings [[liste]]",
+                 links=[("Training A", "https://liste.example/a"), ("Impressum", "https://liste.example/impressum")])
+    einzel = Page("https://liste.example/a", "Training A", "Training A für Jugendliche [[einzel]]")
+    antwort = {
+        "is_opportunity": True, "title": "Training A", "organizer": "SALTO", "category": "akademie",
+        "target": "person", "format": "praesenz", "language": "en", "travel_covered": "ja",
+        "benefits": [], "effort": "niedrig",
+    }
+
+    class Fetcher:
+        def fetch(self, url):
+            return {liste.url: liste, einzel.url: einzel}.get(url)
+
+    class Gemini:
+        def __init__(self, budget):
+            self.budget = budget
+
+        def search(self, q, today):
+            return SearchResult(hits=[SearchHit("Kalender", liste.url)])
+
+        def generate_json(self, prompt, schema, purpose=""):
+            if not self.budget.take():
+                return None
+            if purpose == "extract":
+                return dict(antwort, is_opportunity="[[einzel]]" in prompt)
+            if purpose == "list_page":
+                return {"items": [{"title": "Training A", "url": einzel.url}]}
+            return None
+
+    settings = load_settings()
+    budget = Budget(30)
+    svc = Services(Gemini(budget), Fetcher(), LocalStore(tmp_path / "s.json"), budget, settings,
+                   {"queries": ["x"], "pages": []}, PROFIL, HEUTE)
+    result = run_pipeline(svc)
+    assert result.counts["uebersichten"] == 1 and result.counts["unterseiten"] == 1
+    assert result.counts["extrahiert"] == 1

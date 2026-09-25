@@ -1,17 +1,42 @@
 # Quellen (öffentlich editierbar).
 
-# a) Suchanfragen für Gemini mit Google Search (rotierend)
+# a) Suchanfragen für die Websuche (Tavily/Brave), rotierend: pro Lauf `gemini.searches_per_run` Stück
 queries:
-  - fully funded summer program high school students AI
+  # Stipendien und Förderung
+  - Schülerstipendium Deutschland Bewerbung 2026 2027
+  - Stipendium für Schüler Oberstufe Bewerbungsfrist
+  - scholarship for high school students Europe fully funded 2027
+  - Auslandsjahr Stipendium Schüler Bewerbung
+  - Förderprogramm Jugendliche Projektidee Bewerbung
+  - Schülerfirma Förderung Wettbewerb Preisgeld
+  # Akademien, Sommerschulen, Workshops
+  - Sommerakademie Schüler MINT 2027
+  - summer school high school students AI computer science free
+  - pre-college research program scholarship international students
+  - Workshop für Jugendliche kostenlos Anmeldung 2026
+  - Schülerakademie Informatik Bewerbung
+  - Uni Schnupperstudium Schüler Informatik Programm
+  # Europa und Jugendaustausch (SALTO, Erasmus+, Europäisches Solidaritätskorps)
+  - SALTO-YOUTH training course young people call for participants
+  - Erasmus+ youth exchange call for participants Germany 2026
+  - youth exchange Europe travel costs covered participants wanted
+  - European Youth Event youth forum call for applications
+  - Jugendbegegnung Europa Teilnehmende gesucht Reisekosten
+  - Jugendforum Deutschland Delegierte Bewerbung
+  # Wettbewerbe und Hackathons
   - KI Wettbewerb Schüler 2027
-  - Schülerstipendium Deutschland Informatik
-  - international youth summit fully funded 2027
-  - Hackathon Schüler Deutschland
-  - Sommerakademie Schüler MINT
-  - pre-college research program AI scholarship
-  - youth startup incubator Europe students
-  - Förderung Schülerfirma Projekt KI
-  - cloud credits nonprofit student project
+  - Informatik Wettbewerb Jugendliche Anmeldung
+  - Hackathon Schüler Deutschland 2026
+  - hackathon for teenagers Europe 2026 travel funded
+  - Olympiade Schüler Informatik Mathematik Anmeldung
+  - Ideenwettbewerb Jugendliche Nachhaltigkeit Preisgeld
+  # Gipfel, Netzwerke, Programme
+  - international youth summit fully funded 2027 application
+  - young leaders program Europe application students
+  - youth startup incubator Europe students application
+  - Gründerprogramm Schüler Startup Förderung
+  - Mentoring Programm Schüler Bewerbung kostenlos
+  - cloud credits student project free program
 
 # b) Kuratierte Quellenseiten (Phase 3): werden direkt geladen und ausgewertet.
 # enabled: false oder leere url = wird übersprungen. URLs bitte gelegentlich prüfen!
@@ -28,8 +53,44 @@ pages:
     url: https://youth.europa.eu/
     priority: niedrig
     enabled: true
-  - name: SALTO-YOUTH
-    url: https://www.salto-youth.net/
+  - name: SALTO-YOUTH Trainingskalender
+    url: https://www.salto-youth.net/tools/european-training-calendar/
+    priority: hoch
+    enabled: true
+  - name: European Youth Portal – Ins Ausland
+    url: https://youth.europa.eu/go-abroad_en
+    priority: mittel
+    enabled: true
+  - name: European Youth Portal – Solidarität
+    url: https://youth.europa.eu/solidarity_en
+    priority: niedrig
+    enabled: true
+  - name: Eurodesk Deutschland
+    url: https://www.eurodesk.de/
+    priority: mittel
+    enabled: true
+  - name: rausvonzuhaus
+    url: https://www.rausvonzuhaus.de/
+    priority: mittel
+    enabled: true
+  - name: JUGEND für Europa
+    url: https://www.jugendfuereuropa.de/
+    priority: niedrig
+    enabled: true
+  - name: Jugendwettbewerbe
+    url: https://www.jugendwettbewerbe.de/
+    priority: hoch
+    enabled: true
+  - name: Opportunity Desk
+    url: https://opportunitydesk.org/
+    priority: mittel
+    enabled: true
+  - name: Youth Opportunities
+    url: https://www.youthop.com/
+    priority: mittel
+    enabled: true
+  - name: Opportunities for Youth
+    url: https://opportunitiesforyouth.org/
     priority: niedrig
     enabled: true
   - name: Deutsche SchülerAkademie
