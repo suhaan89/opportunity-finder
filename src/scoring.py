@@ -181,10 +181,24 @@ def build_score_prompt(o: Opportunity, profile: dict[str, Any]) -> str:
         "Aufgaben:\n"
         "- interest_relevance: je Interessengebiet 0-100, wie stark das Angebot dazu passt.\n"
         "- prestige: 0-100, wie renommiert Anbieter und Angebot sind (Bekanntheit, Auswahlverfahren).\n"
-        "- career: 0-100, Nutzen für KI-Forschung, Bewerbung an Top-Unis und Startups.\n"
+        "- career: 0-100, Nutzen für die persönliche Entwicklung: neue Erfahrungen, Reisen, Netzwerk, "
+        "Bewerbung an Top-Unis und Startups. Ein Angebot muss NICHT mit KI zu tun haben, um wertvoll zu sein.\n"
         "- regional: true, wenn der Ort im Umkreis von regionalradius_km um den Heimatort liegt.\n"
         "- reason: EIN kurzer Satz auf Deutsch, warum dieser Score.\n"
     )
+
+
+def with_extra_interests(profile: dict[str, Any], settings: dict[str, Any]) -> dict[str, Any]:
+    """Ergänzt die Interessen aus dem Profil um `scoring.extra_interests` aus settings.yaml.
+
+    So lassen sich allgemeine Interessen (z. B. kostenlos reisen) öffentlich einstellen,
+    ohne das private Profil-Secret zu ändern. Werte im Profil haben Vorrang.
+    """
+    extra = (settings.get("scoring", {}) or {}).get("extra_interests", {}) or {}
+    if not extra:
+        return profile
+    punkte = {**extra, **(profile.get("interessen_punkte", {}) or {})}
+    return {**profile, "interessen_punkte": punkte}
 
 
 def score_opportunity(o: Opportunity, profile: dict[str, Any], settings: dict[str, Any], gemini: Any) -> bool:
@@ -192,6 +206,7 @@ def score_opportunity(o: Opportunity, profile: dict[str, Any], settings: dict[st
 
     Gibt False zurück, wenn Gemini keine gültige Antwort lieferte (Eintrag wird übersprungen).
     """
+    profile = with_extra_interests(profile, settings)
     schema = build_score_schema(profile)
     ai = gemini.generate_json(build_score_prompt(o, profile), schema, purpose="score")
     if ai is None or list(Draft202012Validator(schema).iter_errors(ai)):
