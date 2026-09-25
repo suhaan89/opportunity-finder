@@ -47,3 +47,30 @@ class BraveSearch:
             if isinstance(url, str) and url.startswith(("http://", "https://")):
                 hits.append(SearchHit(str(r.get("title", ""))[:200], url))
         return hits
+
+
+TAVILY_URL = "https://api.tavily.com/search"
+
+
+class TavilySearch:
+    """Tavily-Suche: 1000 Gratis-Credits pro Monat, keine Karte nötig. Eine einfache Suche kostet 1 Credit."""
+
+    def __init__(self, api_key: str, count: int = 10, session: Any = None) -> None:
+        self.api_key = api_key
+        self.count = count
+        self._session = session or requests
+
+    def __call__(self, query: str, today: str = "") -> list[SearchHit]:  # noqa: ARG002
+        resp = self._session.post(
+            TAVILY_URL,
+            headers={"Authorization": f"Bearer {self.api_key}"},
+            json={"query": query, "max_results": self.count, "search_depth": "basic"},
+            timeout=30,
+        )
+        resp.raise_for_status()
+        hits: list[SearchHit] = []
+        for r in resp.json().get("results") or []:
+            url = r.get("url")
+            if isinstance(url, str) and url.startswith(("http://", "https://")):
+                hits.append(SearchHit(str(r.get("title", ""))[:200], url))
+        return hits

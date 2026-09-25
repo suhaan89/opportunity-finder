@@ -20,7 +20,7 @@ from .main import load_dotenv
 # Gruppe -> Namen der Werte (aus SPEC Abschnitt 11)
 GROUPS: dict[str, list[str]] = {
     "Gemini (Phase 1)": ["GEMINI_API_KEY"],
-    "Websuche Brave (Phase 1)": ["BRAVE_API_KEY"],
+    "Websuche Tavily oder Brave (Phase 1)": ["TAVILY_API_KEY"],
     "Google Sheet (Phase 1)": ["GOOGLE_SERVICE_ACCOUNT_JSON", "SHEET_ID"],
     "E-Mail (Phase 1)": ["SMTP_USER", "SMTP_APP_PASSWORD", "MAIL_TO"],
     "Kalender-Gist (Phase 2)": ["GIST_TOKEN", "GIST_ID"],
@@ -32,6 +32,8 @@ def is_set(name: str) -> bool:
     """Gesetzt? Für den Service-Account zählt auch die lokale Datei service_account.json."""
     if os.environ.get(name, "").strip():
         return True
+    if name == "TAVILY_API_KEY":  # Brave ist die Alternative
+        return bool(os.environ.get("BRAVE_API_KEY", "").strip())
     if name == "GOOGLE_SERVICE_ACCOUNT_JSON":
         return (ROOT / "service_account.json").exists()
     if name == "MAIL_TO":  # ohne MAIL_TO geht die Mail an SMTP_USER
@@ -63,10 +65,11 @@ def _live_gemini() -> None:
     client.models.generate_content(model=load_settings()["gemini"]["model"], contents="Antworte nur mit: ok")
 
 
-def _live_brave() -> None:
-    from .websearch import BraveSearch
+def _live_websearch() -> None:
+    from .main import _websearch_from_env
 
-    if not BraveSearch(os.environ["BRAVE_API_KEY"].strip())("Stipendium Schüler"):
+    suche = _websearch_from_env()
+    if suche is None or not suche("Stipendium Schüler"):
         raise RuntimeError("keine Treffer")
 
 
@@ -96,7 +99,7 @@ def _live_gmail() -> None:
 
 LIVE_TESTS: list[tuple[str, list[str], Callable[[], None]]] = [
     ("Gemini-Key und Modellname", ["GEMINI_API_KEY"], _live_gemini),
-    ("Brave-Websuche", ["BRAVE_API_KEY"], _live_brave),
+    ("Websuche (Tavily/Brave)", ["TAVILY_API_KEY"], _live_websearch),
     ("Google Sheet erreichbar", ["GOOGLE_SERVICE_ACCOUNT_JSON", "SHEET_ID"], _live_sheet),
     ("Gmail-SMTP-Login", ["SMTP_USER", "SMTP_APP_PASSWORD"], _live_smtp),
     ("Gmail-Lesezugriff (Token)", ["GMAIL_CLIENT_ID", "GMAIL_CLIENT_SECRET", "GMAIL_REFRESH_TOKEN"], _live_gmail),

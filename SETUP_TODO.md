@@ -29,17 +29,17 @@ Windows-Hinweis: Die Befehle unten sind für die Eingabeaufforderung/PowerShell 
 5. Free-Tier-Hinweis: Die Suche mit Google-Grounding hat im Gratis-Tarif ein Tageslimit. Kommt es zu Fehlern
    (Zähler `fehler` im Log), verringere `gemini.searches_per_run` in `config/settings.yaml`.
 
-## 1b. Brave-Suchschlüssel (Websuche, Phase 1)
+## 1b. Websuche-Schlüssel (Tavily, alternativ Brave) (Phase 1)
 
-Die Google-Suche von Gemini ist im Gratis-Tarif gesperrt (Fehler 429). Deshalb sucht das Programm stattdessen mit Brave.
-Gemini liest danach nur noch die gefundenen Seiten.
+Die Google-Suche von Gemini ist im Gratis-Tarif gesperrt (Fehler 429). Deshalb sucht das Programm stattdessen mit **Tavily**
+(1000 Gratis-Suchen pro Monat, laut Tavily-Preisseite keine Karte nötig; du brauchst rund 180). Gemini liest danach nur noch die gefundenen Seiten.
 
-1. Öffne https://brave.com/search/api/ → **„Get started"** → Konto anlegen und den **Gratis-Tarif** („Free" / „Search") wählen.
-   Ob Brave dafür eine Karte zur Verifizierung verlangt, entscheidet Brave. Prüfe, dass der Tarif **0 €** kostet, bevor du bestätigst.
-2. Im Dashboard unter **„API Keys"** einen Schlüssel erzeugen und kopieren.
-3. Trage ihn in `.env` ein (`BRAVE_API_KEY=dein_schluessel`) und lege in GitHub das Secret `BRAVE_API_KEY` an.
-4. Test: `.venv\Scripts\python -m src.check --live` (Zeile „Brave-Websuche").
-5. Ohne `BRAVE_API_KEY` nutzt das Programm weiter die Google-Suche von Gemini (im Gratis-Tarif gesperrt).
+1. Öffne https://www.tavily.com/ → Konto anlegen (**Free-Plan**, „1,000 API credits / month").
+2. Kopiere im Dashboard den **API-Key** (beginnt meist mit `tvly-`).
+3. Trage ihn in `.env` ein (`TAVILY_API_KEY=dein_schluessel`) und lege in GitHub das Secret `TAVILY_API_KEY` an.
+4. Test: `.venv\Scripts\python -m src.check --live` (Zeile „Websuche").
+5. Alternative: `BRAVE_API_KEY` (Brave, Prepaid mit 5 $ Guthaben pro Monat) wird benutzt, wenn kein Tavily-Schlüssel gesetzt ist.
+   Ohne beide Schlüssel nutzt das Programm die (gesperrte) Google-Suche von Gemini.
 
 ## 2. Google Sheet + Service-Account (Phase 1)
 
@@ -90,7 +90,7 @@ Gemini liest danach nur noch die gefundenen Seiten.
    | Name | Wert |
    |---|---|
    | `GEMINI_API_KEY` | Schlüssel aus Schritt 1 |
-   | `BRAVE_API_KEY` | Schlüssel aus Schritt 1b |
+   | `TAVILY_API_KEY` | Schlüssel aus Schritt 1b |
    | `PROFILE_YAML` | **kompletter Inhalt** deiner lokalen `profile.yaml` (mehrzeilig ist ok) |
    | `GOOGLE_SERVICE_ACCOUNT_JSON` | **kompletter Inhalt** von `service_account.json` |
    | `SHEET_ID` | Tabellen-ID aus Schritt 2 |
