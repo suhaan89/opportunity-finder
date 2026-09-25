@@ -185,6 +185,9 @@ class GeminiClient:
             if response is None:
                 return None
             data = parse_json_text(getattr(response, "text", "") or "")
+            # Manche Modelle verpacken ein einzelnes Objekt in ein Array: [{...}] -> {...}
+            if schema.get("type") == "object" and isinstance(data, list) and len(data) == 1 and isinstance(data[0], dict):
+                data = data[0]
             if data is not None and not list(validator.iter_errors(data)):
                 return data
             hint = "\n\nDEINE LETZTE ANTWORT WAR UNGÜLTIG. Antworte ausschließlich mit gültigem JSON nach dem Schema."
