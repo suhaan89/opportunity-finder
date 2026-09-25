@@ -2,9 +2,9 @@
 
 gemini:
   model: gemini-3.1-flash-lite   # Modellname NUR hier ändern, nie im Code (2.5-flash gibt es nicht mehr)
-  max_calls_per_run: 40          # Budget-Schutz: maximale Gemini-Aufrufe pro Lauf
-  searches_per_run: 6            # so viele Suchanfragen werden pro Lauf gestellt (rotierend)
-  seconds_between_calls: 5       # Pause zwischen Aufrufen (Free-Tier-Ratelimit)
+  max_calls_per_run: 150         # Budget-Schutz: maximale Gemini-Aufrufe pro Lauf
+  searches_per_run: 10           # Suchanfragen pro Lauf (rotierend); Tavily-Gratis: 1000/Monat
+  seconds_between_calls: 4       # Pause zwischen Aufrufen (Free-Tier-Ratelimit)
 
 fetch:
   timeout_seconds: 15
@@ -51,4 +51,5 @@ gmail:
   newer_than_days: 3
 
 sources:
-  max_pages_per_run: 6           # so viele Quellenseiten pro Lauf (rotierend, kostet Gemini-Aufrufe)
+  max_pages_per_run: 8           # so viele Quellenseiten pro Lauf (rotierend, kostet Gemini-Aufrufe)
+  max_listing_follow: 12         # so viele Übersichtsseiten (Listen, Kalender) pro Lauf nach Einzel-Angeboten durchsuchen

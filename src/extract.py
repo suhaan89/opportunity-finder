@@ -148,11 +148,22 @@ def build_opportunity(data: dict[str, Any], page: Page, today: date) -> Opportun
     )
 
 
-def extract_opportunity(page: Page, gemini: Any, today: date) -> Opportunity | None:
-    """Seite -> Eintrag, oder None (kein Angebot / ungültige Antwort / Budget leer)."""
+def extract_page(page: Page, gemini: Any, today: date) -> tuple[Opportunity | None, bool]:
+    """Seite -> (Eintrag oder None, ist_uebersicht).
+
+    ist_uebersicht=True heißt: Gemini hat geantwortet, die Seite ist aber kein einzelnes Angebot
+    (z. B. Liste, Kalender, Verzeichnis). Solche Seiten werden danach nach Einzel-Angeboten durchsucht.
+    """
     data = gemini.generate_json(build_extract_prompt(page, today), EXTRACT_SCHEMA, purpose="extract")
     if not isinstance(data, dict) or list(Draft202012Validator(EXTRACT_SCHEMA).iter_errors(data)):
-        return None
+        return None, False
+    if not data.get("is_opportunity"):
+        return None, True
     if not data.get("title"):
-        return None
-    return build_opportunity(data, page, today)
+        return None, False
+    return build_opportunity(data, page, today), False
+
+
+def extract_opportunity(page: Page, gemini: Any, today: date) -> Opportunity | None:
+    """Seite -> Eintrag, oder None (kein Angebot / ungültige Antwort / Budget leer)."""
+    return extract_page(page, gemini, today)[0]

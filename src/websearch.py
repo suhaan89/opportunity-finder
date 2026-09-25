@@ -55,7 +55,7 @@ TAVILY_URL = "https://api.tavily.com/search"
 class TavilySearch:
     """Tavily-Suche: 1000 Gratis-Credits pro Monat, keine Karte nötig. Eine einfache Suche kostet 1 Credit."""
 
-    def __init__(self, api_key: str, count: int = 10, session: Any = None) -> None:
+    def __init__(self, api_key: str, count: int = 15, session: Any = None) -> None:
         self.api_key = api_key
         self.count = count
         self._session = session or requests

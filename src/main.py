@@ -16,12 +16,12 @@ from datetime import date
 from typing import Any
 
 from .collect import (
-    Candidate, collect_from_mail, collect_from_pages, collect_from_search, select_pages,
+    Candidate, collect_from_mail, collect_from_pages, collect_from_search, pick_links, select_pages,
     select_queries, unique_candidates,
 )
 from .config import ROOT, load_settings, load_sources
 from .dedupe import dedupe_batch
-from .extract import extract_opportunity
+from .extract import extract_page
 from .filters import add_warnings, apply_post_score_filters, apply_pre_score_filters
 from .gemini import Budget, GeminiClient
 from .gmail_reader import GmailReader
@@ -199,18 +199,54 @@ def run_pipeline(svc: Services) -> RunResult:
             pages.append(page)
     counts["erreichbar"] = len(pages)
 
-    # 3. Extract (höchstens die Hälfte des Restbudgets, der Rest bleibt fürs Bewerten)
+    # 3. Extract. Übersichtsseiten (Listen, Kalender, Verzeichnisse wie SALTO-YOUTH) werden nicht
+    #    verworfen: Gemini sucht die Links zu den Einzel-Angeboten heraus, die dann ebenfalls gelesen werden
+    #    (eine Ebene tief). Budget: pro gefundenem Eintrag bleibt ein Aufruf fürs Bewerten reserviert.
+    src_cfg = svc.settings.get("sources", {})
+    max_follow = src_cfg.get("max_listing_follow", 8)
     opps: list[Opportunity] = []
-    extract_limit = svc.budget.remaining // 2
-    for page in pages[:extract_limit]:
+    queue: list[tuple[Any, int]] = [(p, 0) for p in pages]
+    followed = 0
+    while queue:
+        if svc.budget.remaining <= len(opps) + 2:
+            break
+        page, depth = queue.pop(0)
         try:
-            o = extract_opportunity(page, svc.gemini, svc.today)
+            o, is_listing = extract_page(page, svc.gemini, svc.today)
         except Exception as exc:  # noqa: BLE001
             print(safe_error("extract", exc))
             _count(counts, "fehler")
             continue
         if o:
             opps.append(o)
+            continue
+        if not (is_listing and depth == 0 and followed < max_follow and page.links):
+            continue
+        followed += 1
+        try:
+            subs = pick_links(svc.gemini, "Übersichtsseite", page.text, page.links, "quelle", page.url)
+        except Exception as exc:  # noqa: BLE001
+            print(safe_error("listing", exc))
+            _count(counts, "fehler")
+            continue
+        for c in subs:
+            sid = make_id(c.url)
+            if sid in known_ids or sid in page_ids:
+                continue
+            try:
+                sub_page = svc.fetcher.fetch(c.url)
+            except Exception:  # noqa: BLE001
+                _count(counts, "fehler")
+                continue
+            if sub_page is None:
+                continue
+            pid = make_id(sub_page.url)
+            if pid in known_ids or pid in page_ids:
+                continue
+            page_ids.add(pid)
+            queue.append((sub_page, 1))
+            _count(counts, "unterseiten")
+    counts["uebersichten"] = followed
     counts["extrahiert"] = len(opps)
 
     # 4. Dedupe (ähnliche Titel)
