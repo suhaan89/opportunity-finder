@@ -1,7 +1,7 @@
 # Einstellungen (öffentlich, keine persönlichen Daten!)
 
 gemini:
-  model: gemini-2.5-flash        # Modellname NUR hier ändern, nie im Code
+  model: gemini-3.1-flash-lite   # Modellname NUR hier ändern, nie im Code (2.5-flash gibt es nicht mehr)
   max_calls_per_run: 40          # Budget-Schutz: maximale Gemini-Aufrufe pro Lauf
   searches_per_run: 6            # so viele Suchanfragen werden pro Lauf gestellt (rotierend)
   seconds_between_calls: 5       # Pause zwischen Aufrufen (Free-Tier-Ratelimit)
