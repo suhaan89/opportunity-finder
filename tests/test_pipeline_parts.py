@@ -339,3 +339,10 @@ def test_nach_fuenf_totalausfaellen_keine_weiteren_aufrufe():
     for _ in range(10):
         assert g._call("p", None) is None
     assert sdk.calls == GeminiClient.FAIL_STOP * GeminiClient.MAX_TRIES
+
+
+def test_einzelnes_objekt_im_array_wird_ausgepackt():
+    sdk = FakeSDK(['[{"x": 5}]'])
+    g = GeminiClient("k", "modell", Budget(5), seconds_between_calls=0, client=sdk)
+    assert g.generate_json("p", SCHEMA) == {"x": 5}
+    assert sdk.calls == 1
