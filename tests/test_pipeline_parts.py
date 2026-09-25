@@ -223,3 +223,59 @@ def test_collect_ueberlebt_kaputte_anfrage():
     cands, failed = collect_from_search(FakeGemini(None), ["eins", "kaputt", "zwei"], HEUTE)
     assert [c.url for c in cands] == ["https://a.example/eins", "https://a.example/zwei"]
     assert failed == 1
+
+
+# ---------- Brave-Websuche (Ersatz für die gesperrte Google-Suche) ----------
+
+class _FakeResp:
+    def __init__(self, data):
+        self._data = data
+
+    def raise_for_status(self):
+        pass
+
+    def json(self):
+        return self._data
+
+
+class _FakeSession:
+    def __init__(self, data):
+        self.data, self.calls = data, []
+
+    def get(self, url, headers, params, timeout):
+        self.calls.append((url, headers, params))
+        return _FakeResp(self.data)
+
+
+def test_brave_liefert_nur_web_links():
+    from src.websearch import BraveSearch
+
+    sitzung = _FakeSession({"web": {"results": [
+        {"title": "Stipendium A", "url": "https://a.example/x"},
+        {"title": "kaputt", "url": "javascript:alert(1)"},
+        {"title": "ohne url"},
+    ]}})
+    hits = BraveSearch("KEY", pause=0, session=sitzung)("Stipendium Schüler")
+    assert [(h.title, h.url) for h in hits] == [("Stipendium A", "https://a.example/x")]
+    url, headers, params = sitzung.calls[0]
+    assert headers["X-Subscription-Token"] == "KEY" and params["q"] == "Stipendium Schüler"
+
+
+def test_brave_ohne_ergebnisse_ist_leer():
+    from src.websearch import BraveSearch
+
+    assert BraveSearch("KEY", pause=0, session=_FakeSession({}))("x") == []
+
+
+def test_gemini_suche_nutzt_brave_und_ruft_gemini_nicht_auf():
+    class KeinSdk:
+        class models:
+            @staticmethod
+            def generate_content(**kw):
+                raise AssertionError("Gemini darf für die Suche nicht aufgerufen werden")
+
+    g = GeminiClient("k", "modell", Budget(5), seconds_between_calls=0, client=KeinSdk(),
+                     web_search=lambda q, heute: [SearchHit("T", "https://t.example")])
+    result = g.search("frage", "2026-09-25")
+    assert [(h.title, h.url) for h in result.hits] == [("T", "https://t.example")]
+    assert g.budget.used == 0
