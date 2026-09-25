@@ -83,14 +83,15 @@ class RunResult:
     tables: Tables = field(default_factory=Tables)
 
 
-def _brave_from_env() -> Any:
-    """Brave-Suche, wenn BRAVE_API_KEY gesetzt ist (Ersatz für die gesperrte Google-Suche), sonst None."""
-    key = os.environ.get("BRAVE_API_KEY", "").strip()
-    if not key:
-        return None
-    from .websearch import BraveSearch
+def _websearch_from_env() -> Any:
+    """Ersatz für die gesperrte Google-Suche von Gemini: Tavily (TAVILY_API_KEY), sonst Brave (BRAVE_API_KEY), sonst None."""
+    from .websearch import BraveSearch, TavilySearch
 
-    return BraveSearch(key)
+    tavily = os.environ.get("TAVILY_API_KEY", "").strip()
+    if tavily:
+        return TavilySearch(tavily)
+    brave = os.environ.get("BRAVE_API_KEY", "").strip()
+    return BraveSearch(brave) if brave else None
 
 
 def build_services(mock: bool) -> Services:
@@ -109,7 +110,7 @@ def build_services(mock: bool) -> Services:
     fetch = settings.get("fetch", {})
     store, _echt = open_store()
     return Services(
-        GeminiClient(api_key, g["model"], budget, g.get("seconds_between_calls", 5), web_search=_brave_from_env()),
+        GeminiClient(api_key, g["model"], budget, g.get("seconds_between_calls", 5), web_search=_websearch_from_env()),
         Fetcher(fetch.get("timeout_seconds", 15), fetch.get("max_chars", 12000), fetch.get("user_agent", "opportunity-finder")),
         store, budget, settings, sources, profile, today, mail_reader=GmailReader.from_env(),
     )

@@ -279,3 +279,38 @@ def test_gemini_suche_nutzt_brave_und_ruft_gemini_nicht_auf():
     result = g.search("frage", "2026-09-25")
     assert [(h.title, h.url) for h in result.hits] == [("T", "https://t.example")]
     assert g.budget.used == 0
+
+
+class _FakePostSession:
+    def __init__(self, data):
+        self.data, self.calls = data, []
+
+    def post(self, url, headers, json, timeout):
+        self.calls.append((url, headers, json))
+        return _FakeResp(self.data)
+
+
+def test_tavily_liefert_nur_web_links():
+    from src.websearch import TavilySearch
+
+    sitzung = _FakePostSession({"results": [
+        {"title": "Hackathon B", "url": "https://b.example/h", "content": "..."},
+        {"title": "kaputt", "url": "ftp://x"},
+    ]})
+    hits = TavilySearch("KEY", session=sitzung)("Hackathon Schüler")
+    assert [(h.title, h.url) for h in hits] == [("Hackathon B", "https://b.example/h")]
+    url, headers, body = sitzung.calls[0]
+    assert headers["Authorization"] == "Bearer KEY" and body["query"] == "Hackathon Schüler"
+
+
+def test_anbieter_wahl_tavily_vor_brave(monkeypatch):
+    from src.main import _websearch_from_env
+    from src.websearch import BraveSearch, TavilySearch
+
+    monkeypatch.delenv("TAVILY_API_KEY", raising=False)
+    monkeypatch.delenv("BRAVE_API_KEY", raising=False)
+    assert _websearch_from_env() is None
+    monkeypatch.setenv("BRAVE_API_KEY", "b")
+    assert isinstance(_websearch_from_env(), BraveSearch)
+    monkeypatch.setenv("TAVILY_API_KEY", "t")
+    assert isinstance(_websearch_from_env(), TavilySearch)
