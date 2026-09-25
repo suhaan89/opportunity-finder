@@ -2,7 +2,7 @@
 
 gemini:
   model: gemini-3.1-flash-lite   # Modellname NUR hier ändern, nie im Code (2.5-flash gibt es nicht mehr)
-  max_calls_per_run: 150         # Budget-Schutz: maximale Gemini-Aufrufe pro Lauf
+  max_calls_per_run: 250         # Budget-Schutz: maximale Gemini-Aufrufe pro Lauf (ca. 9 s pro Aufruf, ~40 min)
   searches_per_run: 10           # Suchanfragen pro Lauf (rotierend); Tavily-Gratis: 1000/Monat
   seconds_between_calls: 4       # Pause zwischen Aufrufen (Free-Tier-Ratelimit)
 
