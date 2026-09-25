@@ -198,7 +198,7 @@ class FakeGemini:
 
 def test_extract_opportunity_validiert_schema():
     assert extract_opportunity(SEITE, FakeGemini(dict(ANTWORT)), HEUTE) is not None
-    assert extract_opportunity(SEITE, FakeGemini(dict(ANTWORT, category="quatsch")), HEUTE) is None
+    assert extract_opportunity(SEITE, FakeGemini(dict(ANTWORT, category="quatsch")), HEUTE).category == "sonstiges"
     assert extract_opportunity(SEITE, FakeGemini(None), HEUTE) is None
     assert extract_opportunity(SEITE, FakeGemini(dict(ANTWORT, deadline="15.01.2027")), HEUTE) is None
 
@@ -346,3 +346,22 @@ def test_einzelnes_objekt_im_array_wird_ausgepackt():
     g = GeminiClient("k", "modell", Budget(5), seconds_between_calls=0, client=sdk)
     assert g.generate_json("p", SCHEMA) == {"x": 5}
     assert sdk.calls == 1
+
+
+def test_normalisierung_freier_modellantworten():
+    from src.extract import normalize_extract, EXTRACT_SCHEMA
+    from jsonschema import Draft202012Validator
+
+    roh = [dict(ANTWORT, category="Trainings or Workshops", format="in-person", language="English",
+                travel_covered=True, benefits=["Accommodation", "Certificate"], effort="Low")]
+    d = normalize_extract(roh)
+    assert d["category"] == "akademie" and d["format"] == "praesenz" and d["language"] == "en"
+    assert d["travel_covered"] == "ja" and d["benefits"] == ["zertifikat"] and d["effort"] == "niedrig"
+    assert not list(Draft202012Validator(EXTRACT_SCHEMA).iter_errors(d))
+    assert normalize_extract(dict(ANTWORT, category="völlig neu"))["category"] == "sonstiges"
+
+
+def test_soziale_netzwerke_werden_uebersprungen():
+    from src.collect import is_social
+    assert is_social("https://www.facebook.com/groups/x") and is_social("https://instagram.com/p/1")
+    assert not is_social("https://www.salto-youth.net/tools/european-training-calendar/")

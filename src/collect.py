@@ -61,8 +61,16 @@ def collect_from_search(gemini: Any, queries: list[str], today: date) -> tuple[l
             continue
         if not result.hits:
             failed += 1
-        cands.extend(Candidate(h.title, h.url, "suche") for h in result.hits)
+        cands.extend(Candidate(h.title, h.url, "suche") for h in result.hits if not is_social(h.url))
     return unique_candidates(cands), failed
+
+
+# Soziale Netzwerke sind ohne Login nicht lesbar: nur verschwendete Abrufe.
+_SOCIAL = re.compile(r"^https?://([a-z0-9-]+\.)*(facebook|instagram|linkedin|tiktok|twitter|x|youtube|reddit|pinterest)\.com/", re.I)
+
+
+def is_social(url: str) -> bool:
+    return bool(_SOCIAL.match(url))
 
 
 # ---------- Phase 3: Quellenseiten und Newsletter ----------
