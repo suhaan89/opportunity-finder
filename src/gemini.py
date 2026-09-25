@@ -96,6 +96,9 @@ def hits_from_response(response: Any) -> list[SearchHit]:
 class GeminiClient:
     """Echter Gemini-Client. `client` kann in Tests durch eine Attrappe ersetzt werden."""
 
+    MAX_TRIES = 4     # Versuche pro Aufruf bei Überlastung (503/429)
+    FAIL_STOP = 5     # so viele komplett gescheiterte Aufrufe in Folge, dann keine weiteren
+
     def __init__(
         self,
         api_key: str,
@@ -110,6 +113,7 @@ class GeminiClient:
         self.budget = budget
         self.pause = seconds_between_calls
         self._last_call = 0.0
+        self._failed_in_a_row = 0
         if client is None:
             from google import genai  # erst hier importieren, damit Tests ohne SDK-Aufrufe laufen
 
@@ -118,24 +122,33 @@ class GeminiClient:
 
     # ----- interne Hilfe -----
     def _call(self, prompt: str, config: Any) -> Any | None:
-        """Ein API-Aufruf mit Budget, Pause und EINEM Wiederholversuch bei Serverfehlern/429."""
-        for attempt in range(2):
-            if not self.budget.take():
-                return None
+        """Ein API-Aufruf: zählt EINMAL gegen das Budget, wartet zwischen Aufrufen und wiederholt bei
+        Überlastung (429/5xx) bis zu MAX_TRIES-mal mit wachsender Wartezeit.
+
+        Fehlversuche wegen Überlastung kosten nichts und verbrauchen deshalb kein Budget.
+        Nach FAIL_STOP komplett gescheiterten Aufrufen in Folge werden keine weiteren mehr versucht
+        (sonst würde ein Ausfall bei Google den Lauf über das Zeitlimit ziehen).
+        """
+        if self._failed_in_a_row >= self.FAIL_STOP or not self.budget.take():
+            return None
+        for attempt in range(self.MAX_TRIES):
             wait = self.pause - (time.monotonic() - self._last_call)
             if wait > 0:
                 time.sleep(wait)
             self._last_call = time.monotonic()
             try:
-                return self._client.models.generate_content(
+                response = self._client.models.generate_content(
                     model=self.model, contents=prompt, config=config
                 )
+                self._failed_in_a_row = 0
+                return response
             except Exception as exc:  # noqa: BLE001 - jede API-Störung soll den Lauf nicht beenden
                 code = getattr(exc, "code", None)
-                if attempt == 0 and code in (429, 500, 502, 503, 504):
-                    time.sleep(min(30, self.pause * 4))
+                if attempt < self.MAX_TRIES - 1 and code in (429, 500, 502, 503, 504):
+                    time.sleep(min(60, self.pause * 4 * 2 ** attempt))
                     continue
-                return None
+                break
+        self._failed_in_a_row += 1
         return None
 
     # ----- öffentliche Funktionen -----

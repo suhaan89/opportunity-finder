@@ -314,3 +314,28 @@ def test_anbieter_wahl_tavily_vor_brave(monkeypatch):
     assert isinstance(_websearch_from_env(), BraveSearch)
     monkeypatch.setenv("TAVILY_API_KEY", "t")
     assert isinstance(_websearch_from_env(), TavilySearch)
+
+
+def test_ueberlastung_wird_mehrfach_wiederholt_und_kostet_ein_budget():
+    def ueberlast():
+        e = Exception("503")
+        e.code = 503
+        return e
+
+    sdk = FakeSDK([ueberlast(), ueberlast(), ueberlast(), '{"x": 7}'])
+    g = GeminiClient("k", "modell", Budget(5), seconds_between_calls=0, client=sdk)
+    assert g.generate_json("p", SCHEMA) == {"x": 7}
+    assert sdk.calls == 4 and g.budget.used == 1
+
+
+def test_nach_fuenf_totalausfaellen_keine_weiteren_aufrufe():
+    def ueberlast():
+        e = Exception("503")
+        e.code = 503
+        return e
+
+    sdk = FakeSDK([ueberlast() for _ in range(40)])
+    g = GeminiClient("k", "modell", Budget(50), seconds_between_calls=0, client=sdk)
+    for _ in range(10):
+        assert g._call("p", None) is None
+    assert sdk.calls == GeminiClient.FAIL_STOP * GeminiClient.MAX_TRIES
