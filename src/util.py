@@ -72,8 +72,23 @@ def _safe_url(url: str) -> str:
         return "(url)"
 
 
+def _response_host(resp: object) -> str:
+    """Hostname der HTTP-Antwort (leer wenn unbekannt)."""
+    raw = getattr(resp, "url", None) or ""
+    if not raw:
+        req = getattr(resp, "request", None)
+        raw = getattr(req, "url", "") if req is not None else ""
+    try:
+        return (urlsplit(raw).hostname or "").lower()
+    except Exception:  # noqa: BLE001
+        return ""
+
+
 def _http_body_excerpt(exc: BaseException, limit: int = 200) -> str:
-    """Kurzer Antworttext ohne Zugangsdaten. Nur ASCII-druckbare Zeichen."""
+    """Kurzer Antworttext ohne Zugangsdaten. Nur ASCII-druckbare Zeichen.
+
+    Nur für api.github.com aufrufen — andere APIs können Suchanfragen/Profil spiegeln.
+    """
     resp = getattr(exc, "response", None)
     if resp is None:
         return ""
@@ -87,24 +102,27 @@ def _http_body_excerpt(exc: BaseException, limit: int = 200) -> str:
 
 
 def http_error_details(exc: BaseException) -> str:
-    """Status, URL (ohne Query) und kurzer Body — nie der Token."""
+    """Status und URL (ohne Query). Body-Ausschnitt nur bei api.github.com — nie der Token."""
     resp = getattr(exc, "response", None)
     if resp is None:
         return type(exc).__name__
     status = getattr(resp, "status_code", "?")
     url = _safe_url(getattr(resp, "url", None) or getattr(getattr(exc, "request", None), "url", "") or "")
-    excerpt = _http_body_excerpt(exc)
     parts = [f"HTTP {status}", f"url={url or '(unbekannt)'}"]
-    if excerpt:
-        parts.append(f"body={excerpt}")
+    # Öffentliche Actions-Logs: Body nur vom Gist-API-Host (kein Echo von Gemini/Suche/Profil)
+    if _response_host(resp) == "api.github.com":
+        excerpt = _http_body_excerpt(exc)
+        if excerpt:
+            parts.append(f"body={excerpt}")
     return "; ".join(parts)
 
 
 def safe_error(step: str, exc: BaseException) -> str:
     """Log-Text für Fehler. Standard: nur Schritt und Fehlertyp.
 
-    Bei HTTP-Fehlern (requests) zusätzlich Status, URL ohne Query und kurzer Body —
-    nie Token, Authorization-Header oder sonstige Zugangsdaten. Actions-Logs sind öffentlich.
+    Bei HTTP-Fehlern (requests) zusätzlich Status und URL ohne Query.
+    Body-Ausschnitt nur für api.github.com (Kalender-Gist); sonst nie Antworttexte —
+    Actions-Logs sind öffentlich und fremde APIs können Profil/Suche zurückspiegeln.
     """
     name = type(exc).__name__
     # requests.HTTPError und Unterklassen: response.status_code ist gesetzt

@@ -71,6 +71,22 @@ def test_safe_error_http_zeigt_status_url_ohne_token():
     assert "GEHEIM" not in text and "access_token" not in text
 
 
+def test_safe_error_http_body_nur_bei_github_api():
+    """Fremde API-Bodies (Gemini o. Ä.) dürfen nicht in öffentliche Logs."""
+    import requests
+
+    resp = requests.Response()
+    resp.status_code = 400
+    resp.url = "https://generativelanguage.googleapis.com/v1beta/models/x:generateContent"
+    resp._content = b'{"error":{"message":"Profil: heimatland Deutschland Interessen ki_forschung"}}'
+    err = requests.HTTPError("400", response=resp)
+    text = safe_error("score", err)
+    assert "HTTP 400" in text
+    assert "url=https://generativelanguage.googleapis.com/v1beta/models/x:generateContent" in text
+    assert "body=" not in text
+    assert "heimatland" not in text and "ki_forschung" not in text and "Profil" not in text
+
+
 def test_beispielprofil_ist_gueltiges_yaml():
     """Das Beispielprofil muss lesbar sein und die wichtigen Schlüssel haben."""
     import yaml
