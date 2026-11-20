@@ -56,6 +56,21 @@ def test_safe_error_zeigt_keine_meldung():
     assert "geheim" not in text and "ValueError" in text
 
 
+def test_safe_error_http_zeigt_status_url_ohne_token():
+    import requests
+
+    resp = requests.Response()
+    resp.status_code = 401
+    resp.url = "https://api.github.com/gists/abc123?access_token=GEHEIM"
+    resp._content = b'{"message":"Bad credentials","documentation_url":"https://docs.github.com"}'
+    err = requests.HTTPError("401 Client Error", response=resp)
+    text = safe_error("kalender", err)
+    assert "HTTPError" in text and "HTTP 401" in text
+    assert "url=https://api.github.com/gists/abc123" in text
+    assert "Bad credentials" in text
+    assert "GEHEIM" not in text and "access_token" not in text
+
+
 def test_beispielprofil_ist_gueltiges_yaml():
     """Das Beispielprofil muss lesbar sein und die wichtigen Schlüssel haben."""
     import yaml

@@ -337,20 +337,32 @@ def run_outputs(svc: Services, result: RunResult) -> dict[str, str]:
         print(safe_error("seite", exc))
         status["seite"] = "FEHLER"
 
-    # Kalender-Feed: in den geheimen Gist hochladen, sonst lokal speichern
+    # Kalender-Feed: lokal speichern; zusätzlich in den geheimen Gist (Fehler dort sind nicht fatal)
     try:
         ics = build_ics(entries)
+        write_local(ics)
         token, gist_id = os.environ.get("GIST_TOKEN", "").strip(), os.environ.get("GIST_ID", "").strip()
         if token and gist_id and not svc.is_mock:
-            publish_gist(ics, token, gist_id)
-            status["kalender"] = "aktualisiert"
+            try:
+                publish_gist(ics, token, gist_id)
+                status["kalender"] = "aktualisiert"
+            except Exception as exc:  # noqa: BLE001
+                msg = safe_error("kalender", exc)
+                print(msg)
+                # GitHub-Actions-Annotation (UI-Warnung); Exit-Code bleibt 0, wenn Mail/Seite ok
+                print(f"::warning::Kalender-Gist fehlgeschlagen — {msg}")
+                status["kalender"] = "FEHLER (lokal gespeichert, Gist nicht aktualisiert)"
         else:
-            write_local(ics)
             status["kalender"] = "lokal gespeichert (out/opportunities.ics)"
     except Exception as exc:  # noqa: BLE001
         print(safe_error("kalender", exc))
         status["kalender"] = "FEHLER"
     return status
+
+
+def outputs_fatal(status: dict[str, str]) -> bool:
+    """Kern-Ausgaben (Mail, Seite) dürfen den Lauf scheitern lassen; nur Kalender nicht."""
+    return any(status.get(k, "").startswith("FEHLER") for k in ("mail", "seite"))
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -384,7 +396,8 @@ def main(argv: list[str] | None = None) -> int:
     print("Zähler: " + ", ".join(f"{k}={v}" for k, v in result.counts.items() if k != "datum"))
     out = run_outputs(svc, result)
     print("Ausgaben: " + ", ".join(f"{k}={v}" for k, v in out.items()))
-    return 1 if "FEHLER" in out.values() else 0
+    # Kalender-Gist ist optional: bei Erfolg von Mail/Seite trotzdem Exit 0 (Warning wurde schon geloggt)
+    return 1 if outputs_fatal(out) else 0
 
 
 if __name__ == "__main__":
