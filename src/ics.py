@@ -99,10 +99,18 @@ def write_local(ics: str, out_dir: Path | None = None) -> Path:
 
 
 def publish_gist(ics: str, token: str, gist_id: str, timeout: float = 30) -> None:
-    """Aktualisiert die Datei im (geheimen) Gist. Wirft bei Fehlern eine Exception (Aufrufer fängt sie)."""
+    """Aktualisiert die Datei im (geheimen) Gist. Wirft bei Fehlern eine Exception (Aufrufer fängt sie).
+
+    Endpoint: PATCH https://api.github.com/gists/{gist_id}
+    Typische Fehler: 401 (Token abgelaufen/ungültig), 403 (Scope fehlt), 404 (Gist-ID/Rechte).
+    """
     resp = requests.patch(
         f"https://api.github.com/gists/{gist_id}",
-        headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"},
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        },
         json={"files": {GIST_FILENAME: {"content": ics}}},
         timeout=timeout,
     )
