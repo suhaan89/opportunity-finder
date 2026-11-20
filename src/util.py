@@ -63,10 +63,51 @@ def normalize_text(text: str) -> str:
     return re.sub(r"\s+", " ", (text or "").lower()).strip()
 
 
-def safe_error(step: str, exc: BaseException) -> str:
-    """Log-Text für Fehler. Enthält NUR den Schritt und den Fehlertyp.
+def _safe_url(url: str) -> str:
+    """URL fürs Log: Schema/Host/Pfad behalten, Query und Fragment entfernen (können Tokens tragen)."""
+    try:
+        parts = urlsplit(url or "")
+        return urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
+    except Exception:  # noqa: BLE001
+        return "(url)"
 
-    Die Fehlermeldung selbst kann Zugangsdaten, Mail- oder Profilinhalte enthalten,
-    und die Actions-Logs sind öffentlich. Deshalb wird sie nie ausgegeben.
+
+def _http_body_excerpt(exc: BaseException, limit: int = 200) -> str:
+    """Kurzer Antworttext ohne Zugangsdaten. Nur ASCII-druckbare Zeichen."""
+    resp = getattr(exc, "response", None)
+    if resp is None:
+        return ""
+    try:
+        raw = (getattr(resp, "text", None) or "")[:limit]
+    except Exception:  # noqa: BLE001
+        return ""
+    cleaned = re.sub(r"(?i)(authorization|token|bearer|ghp_|github_pat_)[^\s\"']*", "[redacted]", raw)
+    cleaned = re.sub(r"[^\x20-\x7E]+", " ", cleaned).strip()
+    return cleaned[:limit]
+
+
+def http_error_details(exc: BaseException) -> str:
+    """Status, URL (ohne Query) und kurzer Body — nie der Token."""
+    resp = getattr(exc, "response", None)
+    if resp is None:
+        return type(exc).__name__
+    status = getattr(resp, "status_code", "?")
+    url = _safe_url(getattr(resp, "url", None) or getattr(getattr(exc, "request", None), "url", "") or "")
+    excerpt = _http_body_excerpt(exc)
+    parts = [f"HTTP {status}", f"url={url or '(unbekannt)'}"]
+    if excerpt:
+        parts.append(f"body={excerpt}")
+    return "; ".join(parts)
+
+
+def safe_error(step: str, exc: BaseException) -> str:
+    """Log-Text für Fehler. Standard: nur Schritt und Fehlertyp.
+
+    Bei HTTP-Fehlern (requests) zusätzlich Status, URL ohne Query und kurzer Body —
+    nie Token, Authorization-Header oder sonstige Zugangsdaten. Actions-Logs sind öffentlich.
     """
-    return f"Fehler in Schritt '{step}': {type(exc).__name__}"
+    name = type(exc).__name__
+    # requests.HTTPError und Unterklassen: response.status_code ist gesetzt
+    if getattr(exc, "response", None) is not None and name == "HTTPError":
+        return f"Fehler in Schritt '{step}': {name} ({http_error_details(exc)})"
+    return f"Fehler in Schritt '{step}': {name}"
