@@ -96,8 +96,8 @@ def test_publish_gist_http_fehler_traegt_status(monkeypatch):
         assert False, "sollte HTTPError werfen"
     except requests.HTTPError as exc:
         text = safe_error("kalender", exc)
-        assert "HTTP 401" in text and "/gists/GISTID" in text and "Bad credentials" in text
-        assert "TOKEN" not in text
+        assert "HTTP 401" in text and "/gists/<redacted>" in text and "Bad credentials" in text
+        assert "TOKEN" not in text and "GISTID" not in text
 
 
 # ---------- Seite ----------

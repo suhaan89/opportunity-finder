@@ -147,6 +147,7 @@ def test_kalender_gist_fehler_ist_nicht_fatal(tmp_path, monkeypatch, capsys):
     assert not outputs_fatal(out)
     log = capsys.readouterr().out
     assert "HTTP 401" in log and "::warning::" in log and "fake-token" not in log
+    assert "fake-gist-id" not in log and "/gists/<redacted>" in log
 
 
 def test_uebersichtsseite_wird_nach_einzelangeboten_durchsucht(tmp_path):

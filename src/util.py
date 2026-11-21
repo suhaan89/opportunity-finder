@@ -63,13 +63,63 @@ def normalize_text(text: str) -> str:
     return re.sub(r"\s+", " ", (text or "").lower()).strip()
 
 
+# Hosts, auf denen ein Pfadsegment die geheime Gist-ID ist (über die ID ist der Gist lesbar).
+_GIST_API_HOST = "api.github.com"
+_GIST_HTML_HOST = "gist.github.com"
+_GIST_RAW_HOST = "gist.githubusercontent.com"
+# Seiten auf gist.github.com, die keine Gist-ID sind.
+_GIST_SITE_PAGES = {"discover", "starred"}
+_GIST_URL_IN_TEXT = re.compile(
+    r"https?://(?:www\.)?(?:api\.github\.com/gists/|gist\.github\.com/|gist\.githubusercontent\.com/)[^\s\"'<>]+",
+    re.IGNORECASE,
+)
+
+
+def _host_key(host: str) -> str:
+    host = (host or "").lower()
+    if host.startswith("www."):
+        return host[4:]
+    return host
+
+
+def _redact_gist_path(host: str, path: str) -> str:
+    """Ersetzt die Gist-ID im Pfad durch <redacted>. Andere URLs bleiben unverändert."""
+    key = _host_key(host)
+    parts = path.split("/")
+    if key == _GIST_API_HOST:
+        # /gists/<id> und /gists/<id>/comments usw.
+        if len(parts) >= 3 and parts[1] == "gists" and parts[2]:
+            parts[2] = "<redacted>"
+    elif key == _GIST_HTML_HOST:
+        # /<id> oder /<user>/<id>/...
+        if len(parts) >= 3 and parts[2]:
+            parts[2] = "<redacted>"
+        elif len(parts) == 2 and parts[1] and parts[1].lower() not in _GIST_SITE_PAGES:
+            parts[1] = "<redacted>"
+    elif key == _GIST_RAW_HOST:
+        # /<user>/<id>/raw/<rev>/<datei>
+        if len(parts) >= 3 and parts[2]:
+            parts[2] = "<redacted>"
+    return "/".join(parts)
+
+
 def _safe_url(url: str) -> str:
-    """URL fürs Log: Schema/Host/Pfad behalten, Query und Fragment entfernen (können Tokens tragen)."""
+    """URL fürs Log: Schema/Host/Pfad, ohne Query und Fragment (können Tokens tragen).
+
+    Gist-IDs im Pfad werden zu <redacted> (API-, HTML- und Raw-Host).
+    Ein geheimer Gist ist für jeden mit der ID lesbar und darf nicht in öffentliche Logs.
+    """
     try:
         parts = urlsplit(url or "")
-        return urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
+        path = _redact_gist_path(parts.hostname or "", parts.path)
+        return urlunsplit((parts.scheme, parts.netloc, path, "", ""))
     except Exception:  # noqa: BLE001
         return "(url)"
+
+
+def _redact_gist_urls(text: str) -> str:
+    """Gist-URLs in Freitext (z. B. API-Antwort) auf dieselbe sichere Form bringen."""
+    return _GIST_URL_IN_TEXT.sub(lambda match: _safe_url(match.group(0)), text)
 
 
 def _response_host(resp: object) -> str:
@@ -97,12 +147,13 @@ def _http_body_excerpt(exc: BaseException, limit: int = 200) -> str:
     except Exception:  # noqa: BLE001
         return ""
     cleaned = re.sub(r"(?i)(authorization|token|bearer|ghp_|github_pat_)[^\s\"']*", "[redacted]", raw)
+    cleaned = _redact_gist_urls(cleaned)
     cleaned = re.sub(r"[^\x20-\x7E]+", " ", cleaned).strip()
     return cleaned[:limit]
 
 
 def http_error_details(exc: BaseException) -> str:
-    """Status und URL (ohne Query). Body-Ausschnitt nur bei api.github.com — nie der Token."""
+    """Status und URL (ohne Query, ohne Gist-ID). Body-Ausschnitt nur bei api.github.com — nie der Token."""
     resp = getattr(exc, "response", None)
     if resp is None:
         return type(exc).__name__
@@ -120,7 +171,7 @@ def http_error_details(exc: BaseException) -> str:
 def safe_error(step: str, exc: BaseException) -> str:
     """Log-Text für Fehler. Standard: nur Schritt und Fehlertyp.
 
-    Bei HTTP-Fehlern (requests) zusätzlich Status und URL ohne Query.
+    Bei HTTP-Fehlern (requests) zusätzlich Status und URL ohne Query und ohne Gist-ID.
     Body-Ausschnitt nur für api.github.com (Kalender-Gist); sonst nie Antworttexte —
     Actions-Logs sind öffentlich und fremde APIs können Profil/Suche zurückspiegeln.
     """

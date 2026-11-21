@@ -66,9 +66,48 @@ def test_safe_error_http_zeigt_status_url_ohne_token():
     err = requests.HTTPError("401 Client Error", response=resp)
     text = safe_error("kalender", err)
     assert "HTTPError" in text and "HTTP 401" in text
-    assert "url=https://api.github.com/gists/abc123" in text
+    assert "url=https://api.github.com/gists/<redacted>" in text
+    assert "abc123" not in text
     assert "Bad credentials" in text
     assert "GEHEIM" not in text and "access_token" not in text
+
+
+def test_safe_error_gist_id_erscheint_nie_im_log():
+    """Eine echte Gist-ID darf in keiner geloggten URL stehen (API, HTML, Raw, Body)."""
+    import requests
+
+    gist_id = "a1b2c3d4e5f6789012345678abcdef01"
+    faelle = [
+        f"https://api.github.com/gists/{gist_id}?access_token=GEHEIM",
+        f"https://api.github.com/gists/{gist_id}/comments",
+        f"https://gist.github.com/owner/{gist_id}",
+        f"https://gist.github.com/{gist_id}#file-opportunities",
+        f"https://www.gist.github.com/owner/{gist_id}/",
+        f"https://gist.githubusercontent.com/owner/{gist_id}/raw/rev/opportunities.ics?token=GEHEIM",
+    ]
+    for url in faelle:
+        resp = requests.Response()
+        resp.status_code = 404
+        resp.url = url
+        resp._content = b'{"message":"Not Found"}'
+        text = safe_error("kalender", requests.HTTPError("404", response=resp))
+        assert gist_id not in text, url
+        assert "<redacted>" in text
+        assert "GEHEIM" not in text and "token=" not in text and "access_token" not in text
+
+    # Antworttext der GitHub-API kann selbst eine Gist-URL enthalten (Auszug bleibt unter 200 Zeichen).
+    resp = requests.Response()
+    resp.status_code = 401
+    resp.url = f"https://api.github.com/gists/{gist_id}"
+    resp._content = (
+        f'https://gist.github.com/o/{gist_id} '
+        f'https://gist.githubusercontent.com/o/{gist_id}/raw/f'
+    ).encode()
+    text = safe_error("kalender", requests.HTTPError("401", response=resp))
+    assert gist_id not in text
+    assert "url=https://api.github.com/gists/<redacted>" in text
+    assert "https://gist.github.com/o/<redacted>" in text
+    assert "https://gist.githubusercontent.com/o/<redacted>/raw/f" in text
 
 
 def test_safe_error_http_body_nur_bei_github_api():
