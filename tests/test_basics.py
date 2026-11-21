@@ -75,13 +75,18 @@ def test_safe_error_http_zeigt_status_url_ohne_token():
 def test_safe_error_gist_id_erscheint_nie_im_log():
     """Eine echte Gist-ID darf in keiner geloggten URL stehen (API, HTML, Raw, Body)."""
     import requests
+    from src.util import _safe_url
 
     gist_id = "a1b2c3d4e5f6789012345678abcdef01"
     faelle = [
         f"https://api.github.com/gists/{gist_id}?access_token=GEHEIM",
         f"https://api.github.com/gists/{gist_id}/comments",
+        f"https://api.github.com/GISTS/{gist_id}",  # case-insensitive /gists/
         f"https://gist.github.com/owner/{gist_id}",
         f"https://gist.github.com/{gist_id}#file-opportunities",
+        f"https://gist.github.com/{gist_id}/",  # Kurzform + trailing slash
+        f"https://gist.github.com/{gist_id}/raw",  # Kurzform + /raw (nicht user/id)
+        f"https://gist.github.com/{gist_id}//",  # doppelter trailing slash
         f"https://www.gist.github.com/owner/{gist_id}/",
         f"https://gist.githubusercontent.com/owner/{gist_id}/raw/rev/opportunities.ics?token=GEHEIM",
     ]
@@ -94,6 +99,11 @@ def test_safe_error_gist_id_erscheint_nie_im_log():
         assert gist_id not in text, url
         assert "<redacted>" in text
         assert "GEHEIM" not in text and "token=" not in text and "access_token" not in text
+
+    # Kurzform-Pfad: ID steht in Segment 1, nicht fälschlich „raw“ ersetzen
+    assert _safe_url(f"https://gist.github.com/{gist_id}/") == "https://gist.github.com/<redacted>"
+    assert _safe_url(f"https://gist.github.com/{gist_id}/raw") == "https://gist.github.com/<redacted>/raw"
+    assert gist_id not in _safe_url(f"https://gist.github.com/{gist_id}//raw")
 
     # Antworttext der GitHub-API kann selbst eine Gist-URL enthalten (Auszug bleibt unter 200 Zeichen).
     resp = requests.Response()

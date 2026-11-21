@@ -69,6 +69,8 @@ _GIST_HTML_HOST = "gist.github.com"
 _GIST_RAW_HOST = "gist.githubusercontent.com"
 # Seiten auf gist.github.com, die keine Gist-ID sind.
 _GIST_SITE_PAGES = {"discover", "starred"}
+# Nach einer Kurzform-ID (/<id>/...) kommen diese Segmente, nicht ein Username.
+_GIST_SHORT_SUFFIXES = {"raw", "forks", "edit", "revisions", "download", "archive", "stars", "fork"}
 _GIST_URL_IN_TEXT = re.compile(
     r"https?://(?:www\.)?(?:api\.github\.com/gists/|gist\.github\.com/|gist\.githubusercontent\.com/)[^\s\"'<>]+",
     re.IGNORECASE,
@@ -82,18 +84,31 @@ def _host_key(host: str) -> str:
     return host
 
 
+def _gist_path_parts(path: str) -> list[str]:
+    """Pfadsegmente ohne trailing/leere Mittelteile; führendes '' für absolute Pfade bleibt."""
+    trimmed = (path or "").rstrip("/")
+    parts = trimmed.split("/")
+    if parts and parts[0] == "":
+        return [""] + [p for p in parts[1:] if p]
+    return [p for p in parts if p]
+
+
 def _redact_gist_path(host: str, path: str) -> str:
     """Ersetzt die Gist-ID im Pfad durch <redacted>. Andere URLs bleiben unverändert."""
     key = _host_key(host)
-    parts = path.split("/")
+    parts = _gist_path_parts(path)
     if key == _GIST_API_HOST:
-        # /gists/<id> und /gists/<id>/comments usw.
-        if len(parts) >= 3 and parts[1] == "gists" and parts[2]:
+        # /gists/<id> und /gists/<id>/comments usw. (Pfadvergleich case-insensitive)
+        if len(parts) >= 3 and parts[1].lower() == "gists" and parts[2]:
             parts[2] = "<redacted>"
     elif key == _GIST_HTML_HOST:
-        # /<id> oder /<user>/<id>/...
-        if len(parts) >= 3 and parts[2]:
-            parts[2] = "<redacted>"
+        # /<id>, /<id>/raw..., oder /<user>/<id>/...
+        if len(parts) >= 3 and parts[1] and parts[2]:
+            if parts[2].lower() in _GIST_SHORT_SUFFIXES:
+                if parts[1].lower() not in _GIST_SITE_PAGES:
+                    parts[1] = "<redacted>"
+            else:
+                parts[2] = "<redacted>"
         elif len(parts) == 2 and parts[1] and parts[1].lower() not in _GIST_SITE_PAGES:
             parts[1] = "<redacted>"
     elif key == _GIST_RAW_HOST:
