@@ -63,10 +63,153 @@ def normalize_text(text: str) -> str:
     return re.sub(r"\s+", " ", (text or "").lower()).strip()
 
 
-def safe_error(step: str, exc: BaseException) -> str:
-    """Log-Text für Fehler. Enthält NUR den Schritt und den Fehlertyp.
+# Hosts, auf denen ein Pfadsegment die geheime Gist-ID ist (über die ID ist der Gist lesbar).
+_GIST_API_HOST = "api.github.com"
+_GIST_HTML_HOST = "gist.github.com"
+_GIST_RAW_HOST = "gist.githubusercontent.com"
+# Seiten auf gist.github.com, die keine Gist-ID sind.
+_GIST_SITE_PAGES = {"discover", "starred"}
+# Nach einer Kurzform-ID (/<id>/...) kommen diese Segmente, nicht ein Username.
+_GIST_SHORT_SUFFIXES = {"raw", "forks", "edit", "revisions", "download", "archive", "stars", "fork"}
+# Echte Gist-IDs sind 20 (alt) oder 32 Hex-Zeichen. Längere SHAs (Commit im Raw-Pfad) nicht.
+_GIST_ID_RE = re.compile(r"[0-9a-fA-F]{32}|[0-9a-fA-F]{20}")
+_GIST_URL_IN_TEXT = re.compile(
+    r"https?://(?:www\.)?(?:api\.github\.com/gists/|gist\.github\.com/|gist\.githubusercontent\.com/)[^\s\"'<>]+",
+    re.IGNORECASE,
+)
 
-    Die Fehlermeldung selbst kann Zugangsdaten, Mail- oder Profilinhalte enthalten,
-    und die Actions-Logs sind öffentlich. Deshalb wird sie nie ausgegeben.
+
+def _host_key(host: str) -> str:
+    host = (host or "").lower()
+    if host.startswith("www."):
+        return host[4:]
+    return host
+
+
+def _gist_path_parts(path: str) -> list[str]:
+    """Pfadsegmente ohne trailing/leere Mittelteile; führendes '' für absolute Pfade bleibt."""
+    trimmed = (path or "").rstrip("/")
+    parts = trimmed.split("/")
+    if parts and parts[0] == "":
+        return [""] + [p for p in parts[1:] if p]
+    return [p for p in parts if p]
+
+
+def _redact_public_gist_segments(parts: list[str]) -> None:
+    """ID auf gist.github.com und gist.githubusercontent.com ersetzen.
+
+    Der Rest des Pfads bleibt stehen. Abgedeckt, mit und ohne User-Segment:
+    /<id>/, /<id>/raw, /<id>/<irgendwas>/...
+    /<user>/<id>/, /<user>/<id>/raw, /<user>/<id>/<irgendwas>/...
     """
-    return f"Fehler in Schritt '{step}': {type(exc).__name__}"
+    idxs = [i for i, seg in enumerate(parts) if seg]
+    if not idxs:
+        return
+    # Hex-ID an jeder Stelle: ein Folgesegment darf sie nicht verdecken oder selbst als ID gelten.
+    hex_idxs = [i for i in idxs if _GIST_ID_RE.fullmatch(parts[i])]
+    if hex_idxs:
+        for i in hex_idxs:
+            parts[i] = "<redacted>"
+        return
+    if len(idxs) == 1:
+        if parts[idxs[0]].lower() not in _GIST_SITE_PAGES:
+            parts[idxs[0]] = "<redacted>"
+        return
+    # /<id>/raw/... → erstes Segment. Sonst /<user>/<id>/... → zweites, egal was folgt.
+    if parts[idxs[1]].lower() in _GIST_SHORT_SUFFIXES:
+        if parts[idxs[0]].lower() not in _GIST_SITE_PAGES:
+            parts[idxs[0]] = "<redacted>"
+        return
+    parts[idxs[1]] = "<redacted>"
+
+
+def _redact_gist_path(host: str, path: str) -> str:
+    """Ersetzt die Gist-ID im Pfad durch <redacted>. Andere URLs bleiben unverändert."""
+    key = _host_key(host)
+    parts = _gist_path_parts(path)
+    if key == _GIST_API_HOST:
+        # /gists/<id>, /gists/<id>/, /gists/<id>/comments, ... (case-insensitive)
+        if len(parts) >= 3 and parts[1].lower() == "gists" and parts[2]:
+            parts[2] = "<redacted>"
+    elif key in (_GIST_HTML_HOST, _GIST_RAW_HOST):
+        _redact_public_gist_segments(parts)
+    return "/".join(parts)
+
+
+def _safe_url(url: str) -> str:
+    """URL fürs Log: Schema/Host/Pfad, ohne Query und Fragment (können Tokens tragen).
+
+    Gist-IDs im Pfad werden zu <redacted> (API-, HTML- und Raw-Host).
+    Ein geheimer Gist ist für jeden mit der ID lesbar und darf nicht in öffentliche Logs.
+    """
+    try:
+        parts = urlsplit(url or "")
+        path = _redact_gist_path(parts.hostname or "", parts.path)
+        return urlunsplit((parts.scheme, parts.netloc, path, "", ""))
+    except Exception:  # noqa: BLE001
+        return "(url)"
+
+
+def _redact_gist_urls(text: str) -> str:
+    """Gist-URLs in Freitext (z. B. API-Antwort) auf dieselbe sichere Form bringen."""
+    return _GIST_URL_IN_TEXT.sub(lambda match: _safe_url(match.group(0)), text)
+
+
+def _response_host(resp: object) -> str:
+    """Hostname der HTTP-Antwort (leer wenn unbekannt)."""
+    raw = getattr(resp, "url", None) or ""
+    if not raw:
+        req = getattr(resp, "request", None)
+        raw = getattr(req, "url", "") if req is not None else ""
+    try:
+        return (urlsplit(raw).hostname or "").lower()
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def _http_body_excerpt(exc: BaseException, limit: int = 200) -> str:
+    """Kurzer Antworttext ohne Zugangsdaten. Nur ASCII-druckbare Zeichen.
+
+    Nur für api.github.com aufrufen — andere APIs können Suchanfragen/Profil spiegeln.
+    """
+    resp = getattr(exc, "response", None)
+    if resp is None:
+        return ""
+    try:
+        raw = (getattr(resp, "text", None) or "")[:limit]
+    except Exception:  # noqa: BLE001
+        return ""
+    cleaned = re.sub(r"(?i)(authorization|token|bearer|ghp_|github_pat_)[^\s\"']*", "[redacted]", raw)
+    cleaned = _redact_gist_urls(cleaned)
+    cleaned = re.sub(r"[^\x20-\x7E]+", " ", cleaned).strip()
+    return cleaned[:limit]
+
+
+def http_error_details(exc: BaseException) -> str:
+    """Status und URL (ohne Query, ohne Gist-ID). Body-Ausschnitt nur bei api.github.com — nie der Token."""
+    resp = getattr(exc, "response", None)
+    if resp is None:
+        return type(exc).__name__
+    status = getattr(resp, "status_code", "?")
+    url = _safe_url(getattr(resp, "url", None) or getattr(getattr(exc, "request", None), "url", "") or "")
+    parts = [f"HTTP {status}", f"url={url or '(unbekannt)'}"]
+    # Öffentliche Actions-Logs: Body nur vom Gist-API-Host (kein Echo von Gemini/Suche/Profil)
+    if _response_host(resp) == "api.github.com":
+        excerpt = _http_body_excerpt(exc)
+        if excerpt:
+            parts.append(f"body={excerpt}")
+    return "; ".join(parts)
+
+
+def safe_error(step: str, exc: BaseException) -> str:
+    """Log-Text für Fehler. Standard: nur Schritt und Fehlertyp.
+
+    Bei HTTP-Fehlern (requests) zusätzlich Status und URL ohne Query und ohne Gist-ID.
+    Body-Ausschnitt nur für api.github.com (Kalender-Gist); sonst nie Antworttexte —
+    Actions-Logs sind öffentlich und fremde APIs können Profil/Suche zurückspiegeln.
+    """
+    name = type(exc).__name__
+    # requests.HTTPError und Unterklassen: response.status_code ist gesetzt
+    if getattr(exc, "response", None) is not None and name == "HTTPError":
+        return f"Fehler in Schritt '{step}': {name} ({http_error_details(exc)})"
+    return f"Fehler in Schritt '{step}': {name}"

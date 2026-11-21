@@ -68,13 +68,36 @@ def test_ics_datei_und_gist(tmp_path, monkeypatch):
             gesehen["geprueft"] = True
 
     def fake_patch(url, headers, json, timeout):
-        gesehen.update(url=url, auth=headers["Authorization"], dateien=list(json["files"]))
+        gesehen.update(url=url, auth=headers["Authorization"], dateien=list(json["files"]),
+                       api_version=headers.get("X-GitHub-Api-Version"))
         return Antwort()
 
     monkeypatch.setattr("src.ics.requests.patch", fake_patch)
     publish_gist("x", "TOKEN", "GISTID")
     assert gesehen["url"].endswith("/gists/GISTID") and gesehen["dateien"] == ["opportunities.ics"]
-    assert gesehen["geprueft"]
+    assert gesehen["geprueft"] and gesehen["api_version"] == "2022-11-28"
+
+
+def test_publish_gist_http_fehler_traegt_status(monkeypatch):
+    import requests
+    from src.util import safe_error
+
+    class Antwort:
+        status_code = 401
+        url = "https://api.github.com/gists/GISTID"
+        text = '{"message":"Bad credentials"}'
+
+        def raise_for_status(self):
+            raise requests.HTTPError("401", response=self)
+
+    monkeypatch.setattr("src.ics.requests.patch", lambda *a, **k: Antwort())
+    try:
+        publish_gist("x", "TOKEN", "GISTID")
+        assert False, "sollte HTTPError werfen"
+    except requests.HTTPError as exc:
+        text = safe_error("kalender", exc)
+        assert "HTTP 401" in text and "/gists/<redacted>" in text and "Bad credentials" in text
+        assert "TOKEN" not in text and "GISTID" not in text
 
 
 # ---------- Seite ----------

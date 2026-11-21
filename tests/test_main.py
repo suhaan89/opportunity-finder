@@ -117,6 +117,39 @@ def test_reminder_loest_mail_aus(tmp_path, monkeypatch):
     assert "In 7 Tagen" in (tmp_path / "out" / "mail.html").read_text(encoding="utf-8")
 
 
+def test_kalender_gist_fehler_ist_nicht_fatal(tmp_path, monkeypatch, capsys):
+    """Mail+Seite ok, Gist 401 → Warning, lokale .ics, Exit-Logik behandelt Kalender nicht als fatal."""
+    import requests
+    from src.main import outputs_fatal
+
+    _umleiten(monkeypatch, tmp_path)
+    for k in ("SMTP_USER", "SMTP_APP_PASSWORD", "MAIL_TO"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("GIST_TOKEN", "fake-token")
+    monkeypatch.setenv("GIST_ID", "fake-gist-id")
+
+    class Antwort:
+        status_code = 401
+        url = "https://api.github.com/gists/fake-gist-id"
+        text = '{"message":"Bad credentials"}'
+
+        def raise_for_status(self):
+            raise requests.HTTPError("401", response=self)
+
+    monkeypatch.setattr("src.ics.requests.patch", lambda *a, **k: Antwort())
+    svc = services(tmp_path)
+    svc.is_mock = False  # Gist-Pfad aktiv
+    result = run_pipeline(svc)
+    out = run_outputs(svc, result)
+    assert out["seite"].startswith("erstellt")
+    assert out["kalender"].startswith("FEHLER")
+    assert (tmp_path / "out" / "opportunities.ics").exists()
+    assert not outputs_fatal(out)
+    log = capsys.readouterr().out
+    assert "HTTP 401" in log and "::warning::" in log and "fake-token" not in log
+    assert "fake-gist-id" not in log and "/gists/<redacted>" in log
+
+
 def test_uebersichtsseite_wird_nach_einzelangeboten_durchsucht(tmp_path):
     """Eine Liste (z. B. SALTO-Kalender) ist kein Angebot, ihre verlinkten Einzelseiten aber schon."""
     from src.gemini import SearchHit, SearchResult

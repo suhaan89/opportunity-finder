@@ -56,6 +56,134 @@ def test_safe_error_zeigt_keine_meldung():
     assert "geheim" not in text and "ValueError" in text
 
 
+def test_safe_error_http_zeigt_status_url_ohne_token():
+    import requests
+
+    resp = requests.Response()
+    resp.status_code = 401
+    resp.url = "https://api.github.com/gists/abc123?access_token=GEHEIM"
+    resp._content = b'{"message":"Bad credentials","documentation_url":"https://docs.github.com"}'
+    err = requests.HTTPError("401 Client Error", response=resp)
+    text = safe_error("kalender", err)
+    assert "HTTPError" in text and "HTTP 401" in text
+    assert "url=https://api.github.com/gists/<redacted>" in text
+    assert "abc123" not in text
+    assert "Bad credentials" in text
+    assert "GEHEIM" not in text and "access_token" not in text
+
+
+def test_safe_error_gist_id_erscheint_nie_im_log():
+    """Eine echte Gist-ID darf in keiner geloggten URL stehen (API, HTML, Raw, Body)."""
+    import requests
+    from src.util import _safe_url
+
+    gist_id = "a1b2c3d4e5f6789012345678abcdef01"
+    faelle = [
+        f"https://api.github.com/gists/{gist_id}?access_token=GEHEIM",
+        f"https://api.github.com/gists/{gist_id}/comments",
+        f"https://api.github.com/GISTS/{gist_id}",  # case-insensitive /gists/
+        f"https://gist.github.com/owner/{gist_id}",
+        f"https://gist.github.com/{gist_id}#file-opportunities",
+        f"https://gist.github.com/{gist_id}/",  # Kurzform + trailing slash
+        f"https://gist.github.com/{gist_id}/raw",  # Kurzform + /raw (nicht user/id)
+        f"https://gist.github.com/{gist_id}//",  # doppelter trailing slash
+        f"https://www.gist.github.com/owner/{gist_id}/",
+        f"https://gist.githubusercontent.com/owner/{gist_id}/raw/rev/opportunities.ics?token=GEHEIM",
+    ]
+    for url in faelle:
+        resp = requests.Response()
+        resp.status_code = 404
+        resp.url = url
+        resp._content = b'{"message":"Not Found"}'
+        text = safe_error("kalender", requests.HTTPError("404", response=resp))
+        assert gist_id not in text, url
+        assert "<redacted>" in text
+        assert "GEHEIM" not in text and "token=" not in text and "access_token" not in text
+
+    # Kurzform-Pfad: ID steht in Segment 1, nicht fälschlich „raw“ ersetzen
+    assert _safe_url(f"https://gist.github.com/{gist_id}/") == "https://gist.github.com/<redacted>"
+    assert _safe_url(f"https://gist.github.com/{gist_id}/raw") == "https://gist.github.com/<redacted>/raw"
+    assert gist_id not in _safe_url(f"https://gist.github.com/{gist_id}//raw")
+
+    # Antworttext der GitHub-API kann selbst eine Gist-URL enthalten (Auszug bleibt unter 200 Zeichen).
+    resp = requests.Response()
+    resp.status_code = 401
+    resp.url = f"https://api.github.com/gists/{gist_id}"
+    resp._content = (
+        f'https://gist.github.com/o/{gist_id} '
+        f'https://gist.githubusercontent.com/o/{gist_id}/raw/f'
+    ).encode()
+    text = safe_error("kalender", requests.HTTPError("401", response=resp))
+    assert gist_id not in text
+    assert "url=https://api.github.com/gists/<redacted>" in text
+    assert "https://gist.github.com/o/<redacted>" in text
+    assert "https://gist.githubusercontent.com/o/<redacted>/raw/f" in text
+
+
+def test_safe_url_gist_id_bei_slash_raw_und_tieferem_pfad():
+    """ID-Segment weg, mit und ohne User, auch bei Slash, /raw und beliebigem Folgeweg."""
+    from src.util import _safe_url
+
+    gist_id = "a1b2c3d4e5f6789012345678abcdef01"
+    kurz = "abc123"  # keine Hex-ID: Slash und /raw müssen über die Pfadstruktur reichen
+    pfade_struktur = (
+        "/{id}/",
+        "/{id}/raw",
+        "/{id}/raw/rev/opportunities.ics",
+        "/owner/{id}/",
+        "/owner/{id}/raw",
+        "/owner/{id}/raw/rev/opportunities.ics",
+        "/owner/{id}/extra/file",
+    )
+    # Beliebiger Folgeweg (nicht nur /raw): echte Hex-ID, mit und ohne User.
+    pfade_beliebig = pfade_struktur + ("/{id}/extra/file",)
+    hosts = ("https://gist.github.com", "https://gist.githubusercontent.com")
+    for host in hosts:
+        for muster in pfade_beliebig:
+            url = host + muster.format(id=gist_id)
+            sicher = _safe_url(url)
+            assert gist_id not in sicher, url
+            if "/owner/" in muster:
+                assert sicher.startswith(f"{host}/owner/<redacted>")
+            else:
+                assert sicher.startswith(f"{host}/<redacted>")
+        for muster in pfade_struktur:
+            url = host + muster.format(id=kurz)
+            sicher = _safe_url(url)
+            assert kurz not in sicher, url
+            if "/owner/" in muster:
+                assert sicher.startswith(f"{host}/owner/<redacted>")
+            else:
+                assert sicher.startswith(f"{host}/<redacted>")
+
+    for pfad in (f"/gists/{gist_id}/", f"/gists/{gist_id}/comments", f"/gists/{kurz}/raw/file"):
+        sicher = _safe_url("https://api.github.com" + pfad)
+        assert gist_id not in sicher and kurz not in sicher
+        assert sicher.startswith("https://api.github.com/gists/<redacted>")
+
+    # Query bleibt weg; Seitenname ohne ID nicht anfassen.
+    assert _safe_url(f"https://gist.github.com/{gist_id}/raw?token=GEHEIM") == (
+        "https://gist.github.com/<redacted>/raw"
+    )
+    assert _safe_url("https://gist.github.com/discover") == "https://gist.github.com/discover"
+
+
+def test_safe_error_http_body_nur_bei_github_api():
+    """Fremde API-Bodies (Gemini o. Ä.) dürfen nicht in öffentliche Logs."""
+    import requests
+
+    resp = requests.Response()
+    resp.status_code = 400
+    resp.url = "https://generativelanguage.googleapis.com/v1beta/models/x:generateContent"
+    resp._content = b'{"error":{"message":"Profil: heimatland Deutschland Interessen ki_forschung"}}'
+    err = requests.HTTPError("400", response=resp)
+    text = safe_error("score", err)
+    assert "HTTP 400" in text
+    assert "url=https://generativelanguage.googleapis.com/v1beta/models/x:generateContent" in text
+    assert "body=" not in text
+    assert "heimatland" not in text and "ki_forschung" not in text and "Profil" not in text
+
+
 def test_beispielprofil_ist_gueltiges_yaml():
     """Das Beispielprofil muss lesbar sein und die wichtigen Schlüssel haben."""
     import yaml
