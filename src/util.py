@@ -71,6 +71,8 @@ _GIST_RAW_HOST = "gist.githubusercontent.com"
 _GIST_SITE_PAGES = {"discover", "starred"}
 # Nach einer Kurzform-ID (/<id>/...) kommen diese Segmente, nicht ein Username.
 _GIST_SHORT_SUFFIXES = {"raw", "forks", "edit", "revisions", "download", "archive", "stars", "fork"}
+# Echte Gist-IDs sind 20 (alt) oder 32 Hex-Zeichen. Längere SHAs (Commit im Raw-Pfad) nicht.
+_GIST_ID_RE = re.compile(r"[0-9a-fA-F]{32}|[0-9a-fA-F]{20}")
 _GIST_URL_IN_TEXT = re.compile(
     r"https?://(?:www\.)?(?:api\.github\.com/gists/|gist\.github\.com/|gist\.githubusercontent\.com/)[^\s\"'<>]+",
     re.IGNORECASE,
@@ -93,28 +95,44 @@ def _gist_path_parts(path: str) -> list[str]:
     return [p for p in parts if p]
 
 
+def _redact_public_gist_segments(parts: list[str]) -> None:
+    """ID auf gist.github.com und gist.githubusercontent.com ersetzen.
+
+    Der Rest des Pfads bleibt stehen. Abgedeckt, mit und ohne User-Segment:
+    /<id>/, /<id>/raw, /<id>/<irgendwas>/...
+    /<user>/<id>/, /<user>/<id>/raw, /<user>/<id>/<irgendwas>/...
+    """
+    idxs = [i for i, seg in enumerate(parts) if seg]
+    if not idxs:
+        return
+    # Hex-ID an jeder Stelle: ein Folgesegment darf sie nicht verdecken oder selbst als ID gelten.
+    hex_idxs = [i for i in idxs if _GIST_ID_RE.fullmatch(parts[i])]
+    if hex_idxs:
+        for i in hex_idxs:
+            parts[i] = "<redacted>"
+        return
+    if len(idxs) == 1:
+        if parts[idxs[0]].lower() not in _GIST_SITE_PAGES:
+            parts[idxs[0]] = "<redacted>"
+        return
+    # /<id>/raw/... → erstes Segment. Sonst /<user>/<id>/... → zweites, egal was folgt.
+    if parts[idxs[1]].lower() in _GIST_SHORT_SUFFIXES:
+        if parts[idxs[0]].lower() not in _GIST_SITE_PAGES:
+            parts[idxs[0]] = "<redacted>"
+        return
+    parts[idxs[1]] = "<redacted>"
+
+
 def _redact_gist_path(host: str, path: str) -> str:
     """Ersetzt die Gist-ID im Pfad durch <redacted>. Andere URLs bleiben unverändert."""
     key = _host_key(host)
     parts = _gist_path_parts(path)
     if key == _GIST_API_HOST:
-        # /gists/<id> und /gists/<id>/comments usw. (Pfadvergleich case-insensitive)
+        # /gists/<id>, /gists/<id>/, /gists/<id>/comments, ... (case-insensitive)
         if len(parts) >= 3 and parts[1].lower() == "gists" and parts[2]:
             parts[2] = "<redacted>"
-    elif key == _GIST_HTML_HOST:
-        # /<id>, /<id>/raw..., oder /<user>/<id>/...
-        if len(parts) >= 3 and parts[1] and parts[2]:
-            if parts[2].lower() in _GIST_SHORT_SUFFIXES:
-                if parts[1].lower() not in _GIST_SITE_PAGES:
-                    parts[1] = "<redacted>"
-            else:
-                parts[2] = "<redacted>"
-        elif len(parts) == 2 and parts[1] and parts[1].lower() not in _GIST_SITE_PAGES:
-            parts[1] = "<redacted>"
-    elif key == _GIST_RAW_HOST:
-        # /<user>/<id>/raw/<rev>/<datei>
-        if len(parts) >= 3 and parts[2]:
-            parts[2] = "<redacted>"
+    elif key in (_GIST_HTML_HOST, _GIST_RAW_HOST):
+        _redact_public_gist_segments(parts)
     return "/".join(parts)
 
 

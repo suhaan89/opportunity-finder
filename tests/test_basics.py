@@ -120,6 +120,54 @@ def test_safe_error_gist_id_erscheint_nie_im_log():
     assert "https://gist.githubusercontent.com/o/<redacted>/raw/f" in text
 
 
+def test_safe_url_gist_id_bei_slash_raw_und_tieferem_pfad():
+    """ID-Segment weg, mit und ohne User, auch bei Slash, /raw und beliebigem Folgeweg."""
+    from src.util import _safe_url
+
+    gist_id = "a1b2c3d4e5f6789012345678abcdef01"
+    kurz = "abc123"  # keine Hex-ID: Slash und /raw müssen über die Pfadstruktur reichen
+    pfade_struktur = (
+        "/{id}/",
+        "/{id}/raw",
+        "/{id}/raw/rev/opportunities.ics",
+        "/owner/{id}/",
+        "/owner/{id}/raw",
+        "/owner/{id}/raw/rev/opportunities.ics",
+        "/owner/{id}/extra/file",
+    )
+    # Beliebiger Folgeweg (nicht nur /raw): echte Hex-ID, mit und ohne User.
+    pfade_beliebig = pfade_struktur + ("/{id}/extra/file",)
+    hosts = ("https://gist.github.com", "https://gist.githubusercontent.com")
+    for host in hosts:
+        for muster in pfade_beliebig:
+            url = host + muster.format(id=gist_id)
+            sicher = _safe_url(url)
+            assert gist_id not in sicher, url
+            if "/owner/" in muster:
+                assert sicher.startswith(f"{host}/owner/<redacted>")
+            else:
+                assert sicher.startswith(f"{host}/<redacted>")
+        for muster in pfade_struktur:
+            url = host + muster.format(id=kurz)
+            sicher = _safe_url(url)
+            assert kurz not in sicher, url
+            if "/owner/" in muster:
+                assert sicher.startswith(f"{host}/owner/<redacted>")
+            else:
+                assert sicher.startswith(f"{host}/<redacted>")
+
+    for pfad in (f"/gists/{gist_id}/", f"/gists/{gist_id}/comments", f"/gists/{kurz}/raw/file"):
+        sicher = _safe_url("https://api.github.com" + pfad)
+        assert gist_id not in sicher and kurz not in sicher
+        assert sicher.startswith("https://api.github.com/gists/<redacted>")
+
+    # Query bleibt weg; Seitenname ohne ID nicht anfassen.
+    assert _safe_url(f"https://gist.github.com/{gist_id}/raw?token=GEHEIM") == (
+        "https://gist.github.com/<redacted>/raw"
+    )
+    assert _safe_url("https://gist.github.com/discover") == "https://gist.github.com/discover"
+
+
 def test_safe_error_http_body_nur_bei_github_api():
     """Fremde API-Bodies (Gemini o. Ä.) dürfen nicht in öffentliche Logs."""
     import requests
